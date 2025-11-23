@@ -4,6 +4,7 @@ data/*.parquet
 data/*.json
 data/raw_news/
 data/model/
+data/market/
 
 
 # Byte-compiled / optimized / DLL files
