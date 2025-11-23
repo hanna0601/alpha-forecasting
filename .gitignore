@@ -5,6 +5,7 @@ data/*.json
 data/raw_news/
 data/model/
 data/market/
+data/
 
 
 # Byte-compiled / optimized / DLL files
