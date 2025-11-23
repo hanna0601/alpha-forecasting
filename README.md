@@ -113,7 +113,7 @@ Final dataset includes:
 - Daily news sentiment
 - PCA news embeddings
 - return_next_day target
-- Optional momentum features
+- todo - Optional momentum features
 
 Final shape:
 - 963,223 rows
