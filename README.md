@@ -1,6 +1,6 @@
 # alpha-forecasting
 
-# Dataset Construction Summary (News → Final Merged Dataset)
+# Dataset Construction Summary 
 
 This document summarizes all steps starting from news processing, leading to the final merged dataset used for the forecasting model.
 
