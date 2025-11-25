@@ -6,7 +6,8 @@ data/raw_news/
 data/model/
 data/market/
 data/
-
+.DS_Store
+**/.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

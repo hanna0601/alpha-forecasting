@@ -11,7 +11,9 @@
 \usepackage{booktabs}
 \usepackage{authblk} % for multiple authors
 \usepackage{lipsum}
-\usepackage[none]{hyphenat}
+\usepackage{hyphenat}
+\usepackage[colorlinks=true, urlcolor=black, linkcolor=black]{hyperref}
+
 
 % -------------------------------------------------
 % CODE SETTINGS
@@ -57,8 +59,83 @@
 
 \section{Data}
 
+\subsection{Data Sources}
+
+Because no single source provides all the information required for forecasting and portfolio construction, we integrate data from multiple independent providers. Our final dataset combines four major categories of information:
+
+\begin{itemize}
+    \item \textbf{S\&P 500 Constituents:}  
+    The list of S\&P~500 tickers during our sample period serves as the base universe.
+
+    \item \textbf{Stock Market Data:}  
+    Daily OHLCV (Open, High, Low, Close, Volume) data for all S\&P~500 stocks from 2016--2023 are obtained from Yahoo Finance.
+
+    \item \textbf{Company Fundamentals:}  
+    Firm-level financial metrics (e.g., sales growth, margins, ROA, ROE, leverage, liquidity ratios, valuation ratios) are sourced from WRDS/Compustat.
+
+    \item \textbf{Macroeconomic Indicators:}  
+    Broader economic conditions are captured using FRED variables such as GDP growth, unemployment rates, and Treasury yields.
+
+    \item \textbf{News Data:}  
+    Daily financial news headlines and summaries are collected from the FNSPID dataset.\footnote{\url{https://huggingface.co/datasets/Zihan1004/FNSPID}}
+\end{itemize}
+
+\subsection{Data Processing Pipeline}
+
+After gathering raw inputs, we construct a unified panel dataset at the (ticker, date) level. The main steps are:
+
+\begin{enumerate}
+    \item \textbf{Cleaning and Alignment:}  
+    All data sources are standardized to daily frequency. We merge by ticker and date, forward-fill fundamentals to match market trading days, and remove observations with invalid or missing tickers.
+
+    \item \textbf{Return Construction:}  
+    Using daily closing prices, we compute the next-day stock return, which serves as the prediction target.
+
+    \item \textbf{Feature Engineering:}  
+    We generate:
+    \begin{itemize}
+        \item market-based indicators (returns, volatility, volume changes),
+        \item fundamental ratios (profitability, leverage, valuation),
+        \item macroeconomic variables aligned to each trading day,
+        \item sentiment scores from FinBERT applied to news headlines,
+        \item PCA embeddings from news text for richer semantic representation.
+    \end{itemize}
+
+    \item \textbf{Handling Missing Values:}  
+    \begin{itemize}
+        \item \emph{Forward-filling time-invariant or slowly changing variables}  
+        (e.g., fundamentals such as leverage, ROA, and margins).  
+        These variables are forward-filled \emph{within each firm} so that only past information is used, which prevents look-ahead bias.
+
+        \item \emph{Zero-filling structurally missing ratios or indicators}  
+        (e.g., variables undefined for certain firms or years).  
+        This approach preserves the panel structure without imputing information from the future.
+    \end{itemize}
+
+    \item \textbf{Train–Validation–Test Split:}  
+    To avoid look-ahead bias, we split the dataset chronologically:
+    \begin{itemize}
+        \item 2016--2021 for training,
+        \item 2022 for validation,
+        \item 2023 for out-of-sample testing.
+    \end{itemize}
+\end{enumerate}
+
+This pipeline produces a complete, aligned dataset suitable for both prediction modeling and portfolio backtesting.
+
+
+
 \section{Methodology}
 
+\subsection{Stage 0 - Multimodality}
+\begin{itemize}
+  \item Tabular data
+  \item Text data
+\end{itemize}
+
+\subsection{Stage 1 - Stock Next Day Return Prediction}
+
+\subsection{Stage 2 - Robust Portfolio Optimization}
 
 \section{Discussion}
 
