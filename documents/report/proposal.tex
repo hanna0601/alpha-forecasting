@@ -1,0 +1,134 @@
+\documentclass[11pt]{article}
+
+% -------------------------------------------------
+% PACKAGES
+% -------------------------------------------------
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{graphicx, xcolor, multirow, enumerate, fancyhdr, caption, listings, wrapfig}
+\usepackage{tikz, pgfplots}
+\usetikzlibrary{calc, arrows.meta, positioning, decorations.markings, shadings}
+\usepackage{booktabs}
+\usepackage{authblk} % for multiple authors
+\usepackage{lipsum}
+\usepackage[none]{hyphenat}
+
+% -------------------------------------------------
+% CODE SETTINGS
+% -------------------------------------------------
+\lstset{
+  language=Matlab,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  stringstyle=\color{violet},
+  commentstyle=\color{teal},
+  frame=single,
+  framesep=10pt,
+  xleftmargin=10pt,
+  xrightmargin=10pt,
+  breaklines=true,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  showstringspaces=false,
+  tabsize=4,
+  captionpos=b
+}
+
+% -------------------------------------------------
+% TITLE BLOCK
+% -------------------------------------------------
+\title{\vspace{-1.2cm} % move title up
+\bfseries\Large Multimodal Alpha Forecasting and Robust Portfolio Optimization}
+
+\author[]{Catherine Ma (\texttt{cama12@mit.edu})}
+\author[]{Hanna Zhang (\texttt{zeyuzh@mit.edu})}
+\affil[]{}
+
+\date{} % hide date completely
+
+% -------------------------------------------------
+% DOCUMENT
+% -------------------------------------------------
+\begin{document}
+\maketitle
+\vspace{-1.2cm} % move content closer to title
+
+\section{Problem Summary}
+Our project aims to develop a multimodal machine learning and optimization framework to forecast short-term stock returns and then construct risk-aware portfolios. Using historical data for S\&P~500 companies, we integrate technical indicators, fundamental ratios, and FinBERT-based sentiment from financial news and corporate filings. The model predicts next-day excess returns, which are then translated into optimal portfolio weights through CVaR optimization, linking predictive modeling with prescriptive decision-making.
+
+\section{Datasets}
+
+We construct a dataset combining market, fundamental, textual, and macro information for S\&P~500 equities. The aim is to capture complementary signals from both quantitative trading activity and qualitative corporate disclosures. Table~\ref{tab:data_summary} in the Appendix lists the datasets and features that we propose to use.
+
+
+
+\section{Methods}
+
+\subsection*{Predictive Stage - Next-Day Return Forecasting}
+\textbf{(1)}  Construct a panel of daily market indicators (returns, momentum, volatility), quarterly fundamentals (P/E, ROE, leverage, growth), and macro variables (VIX, yield spread).  \textbf{(2)} Apply FinBERT to 10-K/10-Q MD\&A sections and financial news to extract sentiment scores and text embeddings, merged with tabular data. \textbf{(3)} Train XGBoost, XGBoost + FinBERT embeddings, Optimal Regression Tree to predict the stocks' next day return.
+
+\subsection*{Prescriptive Stage - Portfolio Optimization}
+Predicted returns feed into a mean-CVaR optimization that maximizes expected return and controls tail risk:
+\[
+\max_{w}\; \mathbb{E}[r^{\top}w] - \lambda \text{CVaR}_{\alpha}(w),
+\]
+Weights represent the portfolio decisions allocating capital across assets based on predicted returns.
+
+% \subsection{Evaluation and Backtesting}
+% Rolling backtests assess both predictive and portfolio performance using IC, hit rate, Sharpe ratio, Sortino ratio, CVaR, and drawdown.  
+% Comparisons between tabular and multimodal models quantify the incremental value of FinBERT-based features.
+
+
+\section{Challenges}
+\textbf{(1) Look-ahead bias:} We will mitigate this by aligning fundamentals and filings strictly by their release dates and applying rolling-window validation for training and testing.  
+\textbf{(2) High-dimensional text features:} FinBERT embeddings are computationally intensive; we will reduce dimensionality using PCA and apply regularization to prevent overfitting.  
+\textbf{(3) Project scope:} Given time constraint, we may prioritize the predictive modeling stage if portfolio optimization cannot be fully implemented.
+
+\newpage
+\appendix
+
+\section{Dataset and Feature Summary}
+
+\begin{table}[htbp]
+\centering
+\caption{Summary of datasets and key features.}
+\label{tab:data_summary}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{2.7cm} p{3.2cm} p{2.2cm} p{6.5cm}}
+\toprule
+\textbf{Dataset} & \textbf{Source} & \textbf{Frequency} & \textbf{Key Features / Variables} \\
+\midrule
+
+\textbf{Market} &
+Yahoo Finance, WRDS (CRSP) &
+Daily &
+Open, High, Low, Close, Volume (OHLCV); daily return; 5D/20D momentum; 10D/20D realized volatility; MA5/MA20 ratio; RSI; turnover (Volume / Shares Outstanding). \\[0.5em]
+
+\textbf{Fundamentals} &
+WRDS (Compustat), AlphaVantage API &
+Quarterly $\rightarrow$ Daily &
+P/E, P/B, ROE, ROA, gross margin, Debt/Assets, EPS and revenue YoY growth, log(Market Cap). Forward-filled daily after each filing. \\[0.5em]
+
+\textbf{Textual (News)} &
+NewsAPI, GDELT, FinBERT &
+Daily &
+FinBERT sentiment mean and volatility (7D, 30D); sentiment momentum ($\Delta7D$); positive/neutral/negative sentiment ratios; news volume (headline count). \\[0.5em]
+
+\textbf{Textual (Filings)} &
+SEC EDGAR, FinBERT &
+Quarterly $\rightarrow$ Daily &
+FinBERT sentiment of MD\&A and Risk Factors; cosine similarity across filings (tone shift); sentiment change vs previous quarter; PCA-reduced FinBERT embeddings. \\[0.5em]
+
+\textbf{Macro} &
+FRED, Nasdaq &
+Daily &
+VIX, Treasury yield spread (10Y–2Y), PMI, Federal Funds Rate, and S\&P 500 index returns. \\
+
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+\end{document}
