@@ -88,9 +88,9 @@
    \end{center}
 \end{titlepage}
 
-\begin{abstract}
-    ............To be completed............
-\end{abstract}
+% \begin{abstract}
+%     ............To be completed............
+% \end{abstract}
 
 \section{Introduction}
 \noindent Short-horizon equity return prediction remains one of the most challenging problems in quantitative finance. 
@@ -171,16 +171,16 @@ After gathering raw inputs, we construct a unified panel dataset at the (ticker,
     \end{itemize}
 
 
-    \item \textbf{Handling Missing Values:}  
-    \begin{itemize}
-        \item \emph{Forward-filling time-invariant}  
-        (e.g., fundamentals such as leverage, ROA, and margins).  
-        These variables are forward-filled \emph{within each firm} so that only past information is used, which prevents look-ahead bias.
+    % \item \textbf{Handling Missing Values:}  
+    % \begin{itemize}
+    %     \item \emph{Forward-filling time-invariant}  
+    %     (e.g., fundamentals such as leverage, ROA, and margins).  
+    %     These variables are forward-filled \emph{within each firm} so that only past information is used, which prevents look-ahead bias.
 
-        % \item \emph{Zero-filling structurally missing ratios or indicators}  
-        % (e.g., variables undefined for certain firms or years).  
-        % This approach preserves the panel structure without imputing information from the future.
-    \end{itemize}
+    %     % \item \emph{Zero-filling structurally missing ratios or indicators}  
+    %     % (e.g., variables undefined for certain firms or years).  
+    %     % This approach preserves the panel structure without imputing information from the future.
+    % \end{itemize}
 
         \item \textbf{Train–Validation–Test Split:}  
     To avoid look-ahead bias, we split the dataset chronologically:
@@ -336,19 +336,12 @@ turnover limits. The result is a set of portfolio weights that are smoother,
 more diversified, and more robust than those produced by naïve allocation
 rules.
 
-\subsubsection{Why CVaR Instead of Mean--Variance}
-Traditional mean–variance optimization assumes approximately Gaussian returns
-and penalizes upside and downside volatility symmetrically. In practice, equity
-returns exhibit skewness, kurtosis, and clustered volatility, making extreme
-downside movements far more consequential than symmetric variance. In contrast, CVaR focuses explicitly on the average loss in the worst
-$(1-\alpha)$ fraction of scenarios and remains well-defined under heavy-tailed,
-non-Gaussian distributions.\\
-
-\noindent
-Given portfolio weights $w$ and a set of scenario returns $\{r_t\}_{t=1}^{T}$
-constructed from a rolling 60-day window, the CVaR at level $\alpha = 0.95$ is
-defined via the auxiliary variables $v$ (the VaR threshold) and $\{z_t\}$ (the
-excess tail losses):
+\subsubsection{CVaR Formulation}
+Rather than relying on variance as a proxy for risk, we use CVaR to focus directly on large downside losses. CVaR measures
+the expected loss in the worst $(1-\alpha)$ fraction of outcomes and remains
+well-behaved even when returns are skewed or heavy-tailed. Given portfolio weights $w$ and a set of recent scenario returns
+$\{r_t\}_{t=1}^{T}$, CVaR at confidence level $\alpha = 0.95$ is written using
+auxiliary variables $v$ (the VaR cutoff) and $z_t$ (tail losses):
 \[
 \mathrm{CVaR}_{\alpha}(w)
     = v + \frac{1}{(1-\alpha)T}
@@ -357,19 +350,16 @@ excess tail losses):
 z_t \ge 0,\quad
 z_t \ge -(r_t^\top w) - v.
 \]
-This representation captures the expected loss conditional on being in the tail
-of the return distribution and allows CVaR to be optimized using a linear
-program.
+This linear representation makes the CVaR objective directly optimizable.
 
 \subsubsection{Rolling Scenario Construction}
-To ensure that the optimizer responds to evolving market conditions, the
-scenario set is built from the most recent 60 daily cross-sectional return
-vectors. This non-parametric window captures time-varying features observed in
-real markets, including volatility clustering, shifts in correlation structure,
-and episodic crash risk, without imposing a fixed distributional assumption.
-Consequently, the resulting portfolio weights adapt to the prevailing risk
-environment rather than relying on a static covariance estimate, producing a
-more robust and regime-aware allocation.
+The scenario matrix is built from the most recent 60 days of realized
+cross-sectional returns. Using a rolling window allows the optimizer to reflect
+current market conditions---including changes in volatility, correlations, and
+downside risk—without assuming a particular return distribution. As market
+regimes shift, the CVaR optimizer naturally updates its estimate of tail risk
+and adjusts portfolio weights accordingly.
+
 
 \subsubsection{Optimization Objective and Constraints}
 At each date $t$, the optimizer selects weights for each equity by solving
@@ -382,12 +372,12 @@ At each date $t$, the optimizer selects weights for each equity by solving
 \;-\;
 \mathrm{TC} \cdot \| w - w_{t-1} \|_1,
 \]
-where $\hat{\mu}_t$ are the model's predicted next-day returns (scaled for
+\noindent where $\hat{\mu}_t$ are the model's predicted next-day returns (scaled for
 numerical stability), $\lambda$ controls aversion to tail risk, and the
 $\ell_1$ turnover term penalizes excessive rebalancing and incorporates
-proportional transaction costs.
+proportional transaction costs. \\
 
-We impose the following practical trading constraints:
+\noindent We impose the following practical trading constraints:
 \begin{itemize}
     \item \textbf{Long-only and fully invested:}
           $w_i \ge 0$, $\sum_i w_i = 1$.
@@ -420,20 +410,36 @@ cross-section, and resistant to noise will survive the downside-risk penalty
 and turnover constraints.
 
 \section{Results}
+To compare the predictive contribution of different input modalities, we evaluate five LightGBM models trained on progressively richer feature sets:
+
+\begin{itemize}
+    \item \textbf{Fundamentals:} Day-Month-Sector (DMS), log market capitalization ($\log\_mktcap$), book-to-market ratio (bm), return on assets ($\text{roa\_ttm}$), and return on equity ($\text{roe\_ttm}$).
+    \item \textbf{Mean Sentiment:} DMS, and mean sentiment score from news data.
+    \item \textbf{Mean Sentiment + Embeddings:} DMS, mean sentiment score, and text embeddings.
+    \item \textbf{News Momentum:} DMS and a full set of leak-free sentiment momentum predictors.  
+    For each raw sentiment variable $f \in \{\text{mean},\text{max},\text{min},\text{sum},\text{count}\}$,  
+    the feature set includes:
+    $f$, $f_{\text{lag1}}$, $f_{\text{roll3}}$, $f_{\text{roll5}}$, $f_{\text{vol5}}$, $f_{\text{shock}}$, and $f_{\text{surprise3}}$.
+    \item \textbf{News Momentum + Embeddings:} DMS, News Momentum, and text embeddings.
+
+\end{itemize}
 
 \subsection*{Directional Accuracy for LightGBM Models with Different Feature Sets}
 \begin{figure}[H]
     % \hspace*{-1.5cm} % adjust horizontal position
-    \hspace*{-1.5cm}
-    \includegraphics[width=1\linewidth]{../figures/model_performance_comparison.pdf}
+    \center
+    \includegraphics[width=0.8\linewidth]{../figures/model_performance_comparison.pdf}
     \caption{Directional accuracy for LightGBM models trained with different feature sets.}
     \label{fig:model_performance_comparison}
 \end{figure}
+\noindent \textbf{Interpretation.}  
+Across all models, directional accuracy remains in the narrow range of $0.51$–$0.54$, consistent with well-known limits on daily return predictability. Several patterns emerge. First, all models outperform a naïve random-guessing benchmark (50\%), confirming that even simple tabular signals contain economically meaningful information. Second, the \textit{Fundamentals} and \textit{Mean Sentiment} models achieve the highest test accuracy (approximately $0.540$), indicating that slow-moving valuation ratios and high-level news sentiment indicators are the most stable predictors in our dataset. Third, adding PCA-based text embeddings does not improve performance and, in some cases, slightly reduces accuracy; this suggests that embeddings introduce additional noise relative to their marginal predictive value in daily horizons. Finally, the full \textit{News Momentum} feature set yields modest gains over mean sentiment alone, but the improvement is not consistently reflected on the validation and test splits, which indicates overfitting.  
+
 
 \subsection*{Portfolio Performance under CVaR Optimization with Different Feature Sets}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{../figures/cvar_equity_curves.pdf}
+    \includegraphics[width=0.8\linewidth]{../figures/cvar_equity_curves.pdf}
     \caption{Equity curves for portfolios using CVaR optimization with different feature sets.}
     \label{fig:cvar_equity_curves}
 \end{figure}
@@ -442,57 +448,53 @@ and turnover constraints.
 \centering
 \caption{Performance and Information Coefficient (IC) Statistics for Different Feature Sets}
 \label{tab:performance_ic}
-\begin{tabular}{lcccccc}
+\begin{tabular}{lccccc}
 \toprule
 \textbf{Model} 
     & \textbf{Sharpe} 
     & \textbf{Ann. Return (\%)} 
     & \textbf{Mean IC} 
-    & \textbf{Std IC} 
     & \textbf{IR} \\
 \midrule
-Mean Sentiment               
-    & 1.142 
-    & 10.58 
-    & 0.02685 
-    & 0.15878 
-    & 0.1691  \\
 
-Mean Sentiment + Embeddings  
-    & 0.989 
-    & 9.23 
-    & 0.02067 
-    & 0.12690 
-    & 0.1629  \\
-
-News Momentum + Embeddings   
-    & 0.654 
-    & 6.07 
-    & 0.01457 
-    & 0.11109 
-    & 0.1312  \\
-
-News Momentum                
-    & 0.895 
-    & 8.32 
-    & 0.02786 
-    & 0.14613 
-    & 0.1906  \\
-
-Fundamentals                 
+DMS + Fundamentals                 
     & \textbf{1.166} 
     & \textbf{10.84} 
     & \textbf{0.02834} 
-    & \textbf{0.16981} 
     & \textbf{0.1669}  \\
+DMS + Mean Sentiment               
+    & \textbf{1.142} 
+    & \textbf{10.58} 
+    & \textbf{0.02685} 
+    & \textbf{0.1691}  \\
+DMS + Mean Sentiment + Embeddings  
+    & 0.989 
+    & 9.23 
+    & 0.02067 
+    & 0.1629  \\
+DMS + News Momentum                
+    & 0.895 
+    & 8.32 
+    & 0.02786 
+    & 0.1906  \\
+
+DMS + News Momentum + Embeddings   
+    & 0.654 
+    & 6.07 
+    & 0.01457 
+    & 0.1312  \\
 \bottomrule
 \end{tabular}
 \end{table}
+\noindent \textbf{Interpretation.}
+Table~\ref{tab:performance_ic} summarizes both economic performance and statistical signal quality. The \textit{Sharpe ratio} and \textit{annualized return} reflect how well each model performs when translated into a trading strategy, while the \textit{Information Coefficient (IC)} measures the cross-sectional correlation between predicted and realized returns. The \textit{Information Ratio (IR)} indicates the stability of this signal over time.\\
+
+\noindent Fundamentals and mean sentiment deliver the strongest performance, with the highest Sharpe ratios ($\approx 1.14$–$1.17$) and mean IC values ($\approx 0.027$–$0.028$). This suggests that slow-moving fundamentals and aggregate sentiment remain the most reliable predictors at a daily horizon. Adding text embeddings consistently reduces both Sharpe and IC, indicating that high-dimensional embeddings introduce noise rather than improving predictability. News momentum features offer moderate improvements in IC stability (higher IR) but do not outperform fundamentals in realized portfolio performance. Overall, simpler feature sets provide clearer and more stable signals than embedding-augmented models.
 
 
-\section{Discussion}
-\section{Conclusion}
+\section{Discussion and Conclusion}
+\section{Contribution}
 
-\newpage
-\section*{Appendix}
+% \newpage
+% \section*{Appendix}
 \end{document}
