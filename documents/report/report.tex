@@ -12,6 +12,7 @@
 \usepackage{authblk} % for multiple authors
 \usepackage{lipsum}
 \usepackage{hyphenat}
+\usepackage{float}
 \usepackage[colorlinks=true, urlcolor=black, linkcolor=black]{hyperref}
 
 
@@ -137,7 +138,7 @@ After gathering raw inputs, we construct a unified panel dataset at the (ticker,
     \item \textbf{Feature Engineering:}  
     We generate:
     \begin{itemize}
-        \item \textbf{\textit{Price-Based Features and Technical Indicators}} Daily OHLCV data serve as the foundation for constructing short-horizon technical indicators that are commonly used in quantitative trading:
+        \item \textbf{\textit{Price-Based Features and Technical Indicators.}} Daily OHLCV data serve as the foundation for constructing short-horizon technical indicators that are commonly used in quantitative trading:
         \begin{itemize}
             \item Moving averages at several horizons (2-day, 3-day, 1-week, 2-week, 1-month, 1.5-month, 2-month)
             \item Exponential moving averages (EMA) with windows of 10, 20, and 50 days
@@ -145,7 +146,7 @@ After gathering raw inputs, we construct a unified panel dataset at the (ticker,
             \item Volume-derived proxies, such as log volume 
         \end{itemize}
         These variables constitute the price-signal feature group, which forms the baseline for many of the models evaluated.
-        \item \textit{\textbf{Fundamental Variables}} Forward-filled quarterly financial statement items to incorporate firm-level characteristics:
+        \item \textit{\textbf{Fundamental Variables.}} Forward-filled quarterly financial statement items to incorporate firm-level characteristics:
         \begin{itemize}
             \item Profitability metrics, such as return on assets (ROA), return on equity (ROE), and gross, operating, and net margins 
             \item Growth metrics, including sales growth, asset growth, equity growth
@@ -153,7 +154,7 @@ After gathering raw inputs, we construct a unified panel dataset at the (ticker,
             \item Liquidity and leverage ratios, including current ratio, leverage, and cash holdings 
         \end{itemize}
         These fundamentals capture cross-sectional variation that evolves more slowly but is often predictive of medium-term equity behavior. 
-        \item \textbf{\textit{Macroeconomic Indicators}} Daily or monthly macro variables aligned to trading days:
+        \item \textbf{\textit{Macroeconomic Indicators.}} Daily or monthly macro variables aligned to trading days:
         \begin{itemize}
             \item Market volatility via VIX
             \item Yield curve spreads (10Y–2Y, 10Y–3M)
@@ -161,7 +162,7 @@ After gathering raw inputs, we construct a unified panel dataset at the (ticker,
             \item Economic activity indicators, including industrial production, unemployment, and GDP 
         \end{itemize}
         These variables embed systematic risk dynamics and macro-sensitive return drivers. 
-        \item \textbf{\textit{Sector and Subsector Structure}} Firm-level structure is incorporated using GICS (Global Industry Classification Standard) classifications:
+        \item \textbf{\textit{Sector and Subsector Structure.}} Firm-level structure is incorporated using GICS (Global Industry Classification Standard) classifications:
         \begin{itemize}
             \item One-hot sector indicators 
             \item One-hot subsector indicators 
@@ -209,9 +210,9 @@ To incorporate unstructured information alongside traditional financial signals,
     We compute the daily embedding for each stock by averaging all embeddings associated with its news on that date.
 \end{itemize}
 
-These features capture narrative tone, linguistic signals, and information flow not present in standard price or fundamental data.
+\noindent These features capture narrative tone, linguistic signals, and information flow not present in standard price or fundamental data.
 
-\subsubsection{Dimension Reduction}
+\subsubsection*{Dimension Reduction}
 Because daily embeddings are high-dimensional, we apply PCA to project them onto 64 components.  
 This retains the majority of the variance while keeping the modeling pipeline computationally manageable for a large cross-section of stocks.
 
@@ -225,34 +226,268 @@ Since the goal of this project is to forecast next-day equity returns in a noisy
 \text{DA} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}\left\{\, \operatorname{sign}(\hat{r}_i) = \operatorname{sign}(r_i) \,\right\},
 \]
 
+
 \noindent where $\hat{r}_i$ is the predicted next-day return, $r_i$ is the realized next-day return, and $\mathbf{1}\{\cdot\}$ is the indicator function. A DA of $50\%$ corresponds to random guessing in a balanced up/down environment, so improvements of even 1--2 percentage points are economically meaningful in this setting.
 
 \subsubsection{Baseline Models}
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.9\linewidth]{../figures/top5_baseline_models_accuracy.svg}
-    \caption{\textbf{Top 5 baseline models ranked by train+validation accuracy.} 
-    The blue bars show training and validation directional accuracy, 
-    while the orange bars show out-of-sample test performance for 2023.}
-    \label{fig:top5_baseline}
-\end{figure}
+% \begin{figure}[ht]
+%     \centering
+%     \includegraphics[width=0.9\linewidth]{../figures/baseline_model_comparison_top5.pdf}
+%     \caption{\textbf{Top 5 baseline models ranked by train+validation accuracy.}}
+%     \label{fig:top5_baseline}
+% \end{figure}
+
+Before introducing flexible machine learning methods, we construct a suite of simple, 
+deterministic forecasting rules. These baselines serve two purposes:  
+(i) to provide interpretable benchmarks grounded in standard quantitative finance heuristics 
+(e.g., momentum and seasonality), and  
+(ii) to quantify how much apparent predictability can arise from rule selection rather than 
+genuine signal.
+
+\noindent All baseline models are evaluated on the same S\&P~500 daily return panel using the 
+2016--2022 train--validation period and the 2023 test set.
+
+\subsubsection*{Single-Rule Baselines}
+
+These models apply the same fixed rule across all stocks and dates:
+
+\begin{itemize}
+    \item \textbf{Naive persistence:} predicts tomorrow's return as today's return.
+    \item \textbf{Moving averages (MA):} simple averages over windows such as 2--60 days.
+    \item \textbf{Exponential moving averages (EMA):} exponentially weighted versions of MA rules.
+    \item \textbf{Seasonal rules (S1--S7):} include same-day-last-year, same-month-last-year, 
+    month-of-year means, day-of-week means, and rolling long-horizon averages (21-day, 63-day).
+\end{itemize}
+
+\noindent Directional accuracy for these rules generally clusters around 50\%.  
+The persistence rule performs at chance, short-horizon MA/EMA rules yield modest improvements 
+(50.2--50.5\% in-sample, reverting toward 50\% on test), and several seasonal rules stand out.  
+The day-of-week mean achieves roughly 50.6\% train--validation accuracy and 50.9\% on the test set, 
+and the month-of-year mean reaches nearly 52\% on test, suggesting that coarse calendar structure 
+generalizes better than aggressively tuned short-term momentum rules.
+
+\subsubsection*{Hybrid Baselines}
+
+To relax the ``one-rule-for-all'' constraint, we evaluate hybrid baselines that allow different 
+segments of the data to select their own preferred single-rule predictor based on 
+2016--2022 performance:
+
+\begin{itemize}
+    \item \textbf{Per-ticker:} each stock selects its best single-rule baseline.
+    \item \textbf{Per-month:} each calendar month selects its best rule.
+    \item \textbf{Per-day-of-week:} each weekday selects its best rule.
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Hybrid Method} & \textbf{Train+Val DA} & \textbf{Test DA} \\
+\midrule
+Per-ticker   & 0.5185 & 0.5044 \\
+Per-month    & 0.5144 & 0.5110 \\
+Per-day-of-week & 0.5119 & 0.5040 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The per-ticker method attains the highest in-sample accuracy but does not generalize well, 
+while the month-of-year hybrid yields the most stable out-of-sample performance.  
+Notably, the hybrid selections reveal recurring patterns: the day-of-week average is chosen 
+for 143 tickers, long-horizon rolling means for 59, and several MA/EMA windows (50-day EMA, 
+1-month, 3-day, 14-day) are frequently selected.  
+These patterns indicate that calendar structure and slower-moving return components are the 
+most consistently useful simple predictors, and they inform which feature families are emphasized 
+in the subsequent machine learning models.
+
+\subsubsection*{Summary}
+
+Overall, the baseline results confirm that next-day return prediction is extremely noisy:  
+simple rules rarely exceed 51\% accuracy.  
+Nonetheless, seasonality and long-horizon momentum effects provide weak but persistent signals 
+that serve as meaningful benchmarks for evaluating more flexible multimodal models.
 
 
-\subsubsection{Hybrid Baselines}
-\subsubsection{Linear Regression}
-\subsubsection{Linear Regression}
+
 \subsubsection{XGBoost}
 \subsubsection{CatBoost}
 \subsubsection{LightGBM}
-\subsubsection{LSTM}
-\subsubsection{TCN}
+
 
 \subsection{Robust Portfolio Optimization}
 
+While predictive accuracy indicates that the model captures return-relevant
+patterns, turning point forecasts into actionable trades requires an allocation
+rule that respects risk, diversification, and transaction costs. Simple
+heuristics such as equal-weighting or top-$K$ selection ignore downside
+exposures and often produce unstable, overly concentrated portfolios whose
+performance exaggerates the value of the underlying signal.\\
+
+\noindent To obtain realistic and risk-aware allocations, we employ a robust
+Conditional Value-at-Risk (CVaR) optimization layer. CVaR determines the weight
+assigned to each equity by evaluating how the portfolio would behave under a
+rolling set of recent historical return scenarios. For each day’s prediction
+vector, the optimizer searches for weights that increase exposure to stocks with
+high predicted returns, but penalize those that contribute heavily to losses in
+the worst tail of the return distribution. In practice, this yields portfolios
+that favor assets with both attractive forecasts and stable downside behavior,
+while enforcing constraints such as long-only positions, position-size caps, and
+turnover limits. The result is a set of portfolio weights that are smoother,
+more diversified, and more robust than those produced by naïve allocation
+rules.
+
+\subsubsection{Why CVaR Instead of Mean--Variance}
+Traditional mean–variance optimization assumes approximately Gaussian returns
+and penalizes upside and downside volatility symmetrically. In practice, equity
+returns exhibit skewness, kurtosis, and clustered volatility, making extreme
+downside movements far more consequential than symmetric variance. In contrast, CVaR focuses explicitly on the average loss in the worst
+$(1-\alpha)$ fraction of scenarios and remains well-defined under heavy-tailed,
+non-Gaussian distributions.\\
+
+\noindent
+Given portfolio weights $w$ and a set of scenario returns $\{r_t\}_{t=1}^{T}$
+constructed from a rolling 60-day window, the CVaR at level $\alpha = 0.95$ is
+defined via the auxiliary variables $v$ (the VaR threshold) and $\{z_t\}$ (the
+excess tail losses):
+\[
+\mathrm{CVaR}_{\alpha}(w)
+    = v + \frac{1}{(1-\alpha)T}
+      \sum_{t=1}^{T} z_t,
+\qquad
+z_t \ge 0,\quad
+z_t \ge -(r_t^\top w) - v.
+\]
+This representation captures the expected loss conditional on being in the tail
+of the return distribution and allows CVaR to be optimized using a linear
+program.
+
+\subsubsection{Rolling Scenario Construction}
+To ensure that the optimizer responds to evolving market conditions, the
+scenario set is built from the most recent 60 daily cross-sectional return
+vectors. This non-parametric window captures time-varying features observed in
+real markets, including volatility clustering, shifts in correlation structure,
+and episodic crash risk, without imposing a fixed distributional assumption.
+Consequently, the resulting portfolio weights adapt to the prevailing risk
+environment rather than relying on a static covariance estimate, producing a
+more robust and regime-aware allocation.
+
+\subsubsection{Optimization Objective and Constraints}
+At each date $t$, the optimizer selects weights for each equity by solving
+\[
+\max_{w}
+\quad
+\hat{\mu}_t^\top w
+\;-\;
+\lambda\, \mathrm{CVaR}_{0.95}(w)
+\;-\;
+\mathrm{TC} \cdot \| w - w_{t-1} \|_1,
+\]
+where $\hat{\mu}_t$ are the model's predicted next-day returns (scaled for
+numerical stability), $\lambda$ controls aversion to tail risk, and the
+$\ell_1$ turnover term penalizes excessive rebalancing and incorporates
+proportional transaction costs.
+
+We impose the following practical trading constraints:
+\begin{itemize}
+    \item \textbf{Long-only and fully invested:}
+          $w_i \ge 0$, $\sum_i w_i = 1$.
+    \item \textbf{Position limit:}
+          $w_i \le 2\%$ to prevent concentration.
+    \item \textbf{Turnover limit:}
+          $\|w - w_{t-1}\|_1 \le 10\%$ to avoid hyperactive trading.
+    \item \textbf{Transaction cost penalty:}
+          proportional cost of 5 bps per unit turnover.
+\end{itemize}
+These constraints make the optimization problem both realistic and stable,
+preventing extreme weight allocations that often arise in unconstrained ML
+portfolios.
+
+\subsubsection{Backtesting Procedure}
+For each model's cross-sectional predictions, we build a $T \times N$ matrix of
+predicted returns and a matching matrix of realized one-day-ahead returns. The
+portfolio is rebalanced daily using the CVaR optimizer. Performance is reported
+using standard metrics:
+\[
+\text{Sharpe ratio},\quad
+\text{annualized return},\quad
+\text{annualized volatility},\quad
+\text{and maximum drawdown}.
+\]
+
+\noindent Importantly, CVaR-based optimization acts as a ``stress test'' for the machine
+learning signals: only predictions that are stable, consistent across the
+cross-section, and resistant to noise will survive the downside-risk penalty
+and turnover constraints.
+
 \section{Results}
-compare the best model from each category train&test DA 
-compare the return of each 
+
+\subsection*{Directional Accuracy for LightGBM Models with Different Feature Sets}
+\begin{figure}[H]
+    % \hspace*{-1.5cm} % adjust horizontal position
+    \hspace*{-1.5cm}
+    \includegraphics[width=1\linewidth]{../figures/model_performance_comparison.pdf}
+    \caption{Directional accuracy for LightGBM models trained with different feature sets.}
+    \label{fig:model_performance_comparison}
+\end{figure}
+
+\subsection*{Portfolio Performance under CVaR Optimization with Different Feature Sets}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{../figures/cvar_equity_curves.pdf}
+    \caption{Equity curves for portfolios using CVaR optimization with different feature sets.}
+    \label{fig:cvar_equity_curves}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Performance and Information Coefficient (IC) Statistics for Different Feature Sets}
+\label{tab:performance_ic}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Model} 
+    & \textbf{Sharpe} 
+    & \textbf{Ann. Return (\%)} 
+    & \textbf{Mean IC} 
+    & \textbf{Std IC} 
+    & \textbf{IR} \\
+\midrule
+Mean Sentiment               
+    & 1.142 
+    & 10.58 
+    & 0.02685 
+    & 0.15878 
+    & 0.1691  \\
+
+Mean Sentiment + Embeddings  
+    & 0.989 
+    & 9.23 
+    & 0.02067 
+    & 0.12690 
+    & 0.1629  \\
+
+News Momentum + Embeddings   
+    & 0.654 
+    & 6.07 
+    & 0.01457 
+    & 0.11109 
+    & 0.1312  \\
+
+News Momentum                
+    & 0.895 
+    & 8.32 
+    & 0.02786 
+    & 0.14613 
+    & 0.1906  \\
+
+Fundamentals                 
+    & \textbf{1.166} 
+    & \textbf{10.84} 
+    & \textbf{0.02834} 
+    & \textbf{0.16981} 
+    & \textbf{0.1669}  \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
 \section{Discussion}
