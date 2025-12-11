@@ -66,26 +66,21 @@
 %     \vfill
 % \end{titlepage}
 \begin{titlepage}
-   \begin{center}
-       \vspace*{5cm}
+  \begin{center}
+    \vspace*{\fill}
 
-       {\huge \textbf{Multimodal Alpha Forecasting and Robust Portfolio Optimization}}
+    {\huge \textit{15.095 Machine Learning Under a Modern Optimization Lens}}
 
-       \vspace{0.5cm}
-        {\huge \textit{15.095 Machine Learning Under a Modern Optimization Lens}}
-            
-       \vspace{1.5cm}
+    \vspace{0.5cm}
 
-       {\Large \textbf{Catherine Ma (\texttt{cama12@mit.edu}) \& Hanna Zhang (\texttt{zeyuzh@mit.edu})}}\\
+    {\huge \textbf{Multimodal Alpha Forecasting and Robust Portfolio Optimization}}
 
-       \vfill
+    \vspace{1.5cm}
 
-            
-       \vspace{0.5cm}
-    
-        {\Large November 29, 2025}
-            
-   \end{center}
+    {\Large \textbf{Catherine Ma (\texttt{cama12@mit.edu}) \& Hanna Zhang (\texttt{zeyuzh@mit.edu})}}\\
+
+    \vspace*{\fill}
+  \end{center}
 \end{titlepage}
 
 % \begin{abstract}
@@ -93,81 +88,64 @@
 % \end{abstract}
 
 \section{Introduction}
-\noindent Short-horizon equity return prediction remains one of the most challenging problems in quantitative finance. 
-Daily returns are dominated by noise, exhibit low signal-to-noise ratios, heavily influenced by market microstructure dynamics, and reflect nonlinear interactions among systematic factors, macroeconomic conditions, and firm-specific characteristics. 
-Despite this difficulty, even marginal improvements in predictive accuracy can yield economically meaningful gains when used within a risk-controlled portfolio optimization framework. \\
+\noindent Short-horizon equity return prediction is one of the most challenging problems in quantitative finance. 
+Daily returns have extremely low signal-to-noise ratios, are influenced by market microstructure noise, and arise from nonlinear macro, sector, and firm-level drivers.
+Despite this difficulty, even marginal improvements in predictive accuracy can lead to economically meaningful gains when integrated into a risk-controlled portfolio optimization framework. \\
 
-\noindent The goal of this project is to develop a multimodal forecasting system that integrates complementary sources of information: price-based technical indicators, firm fundamentals, macroeconomic variables, sector and subsector classifications, calendar-time structure, sentiment-derived features and text embeddings from news data. 
+\noindent The goal of this project is to develop a multimodal forecasting system that integrates diverse sources of information: price-based technical indicators, firm fundamentals, macroeconomic variables, sector classifications, calendar effects, and sentiment signals and text embeddings from news data. 
 We aim to evaluate which feature groups contribute meaningful predictive power and generate a next-day return forecast suitable for prescriptive portfolio optimization.
 
 \section{Data}
 
 \subsection{Data Sources}
-
-Because no single source provides all the information required for forecasting and portfolio construction, we integrate data from multiple independent providers. Our final dataset combines four major categories of information:
-ddd
+To support our modeling framework, we compile a daily panel for S\&P~500 stocks using information from multiple independent datasets:
 \begin{itemize}
     \item \textbf{S\&P 500 Constituents:}  
-    The list of S\&P~500 tickers during our sample period serves as the base universe.
+    List of S\&P~500 tickers used to define the modeling universe.
 
     \item \textbf{Stock Market Data:}  
-    Daily OHLCV (Open, High, Low, Close, Volume) data for all S\&P~500 stocks from 2016--2023 are obtained from Yahoo Finance.
+    Daily OHLCV (Open, High, Low, Close, Volume) prices for all S\&P~500 stocks from 2016--2023 from Yahoo Finance.
 
     \item \textbf{Company Fundamentals:}  
-    Firm-level financial metrics (e.g., sales growth, margins, ROA, ROE, leverage, liquidity ratios, valuation ratios) are sourced from WRDS/Compustat.
+    Firm-level financial metrics, such as profitability, margins, growth, leverage, and valuation ratios, sourced from WRDS/Compustat.
 
     \item \textbf{Macroeconomic Indicators:}  
-    Broader economic conditions are captured using FRED variables such as GDP growth, unemployment rates, and Treasury yields.
+    FRED variables, including interest rates, GDP growth, unemployment rates, and treasury yields. 
 
     \item \textbf{News Data:}  
-    Daily financial news headlines and summaries are collected from the FNSPID dataset.\footnote{\url{https://huggingface.co/datasets/Zihan1004/FNSPID}}
+    Daily financial news headlines and summaries collected from the FNSPID datasetm used to compute sentiment scores and text embeddings.\footnote{\url{https://huggingface.co/datasets/Zihan1004/FNSPID}}
 \end{itemize}
 
 \subsection{Data Processing Pipeline}
-
-After gathering raw inputs, we construct a unified panel dataset at the (ticker, date) level. The main steps are:
+All data are merged at the (ticker, date) level to form a consistent daily panel. The main steps are:
 
 \begin{enumerate}
     \item \textbf{Cleaning and Alignment:}  
-    All data sources are standardized to daily frequency. We merge by ticker and date, forward-fill fundamentals to match market trading days.
+    All data sources are standardized to daily frequency. To avoid look-ahead bias, missing fundamental values are forward-filled within each firm.
 
-    \item \textbf{Return Construction:}  
-    Using daily closing prices, we compute the next-day stock return, which serves as the prediction target.
-
+    \item \textbf{Target Variable:}  
+    The next-day return is computed from daily closing prices and used as the prediction target.
 
     \item \textbf{Feature Engineering:}  
-    We generate:
+    We generate four major classes of predictors:
     \begin{itemize}
-        \item \textbf{\textit{Price-Based Features and Technical Indicators.}} Daily OHLCV data serve as the foundation for constructing short-horizon technical indicators that are commonly used in quantitative trading:
-        \begin{itemize}
-            \item Moving averages at several horizons (2-day, 3-day, 1-week, 2-week, 1-month, 1.5-month, 2-month)
-            \item Exponential moving averages (EMA) with windows of 10, 20, and 50 days
-            \item Rolling-window return features (e.g., 3-day, 7-day, and 21-day average returns) that capture short-term momentum and drift in recent price movements
-            \item Volume-derived proxies, such as log volume 
-        \end{itemize}
-        These variables constitute the price-signal feature group, which forms the baseline for many of the models evaluated.
-        \item \textit{\textbf{Fundamental Variables.}} Forward-filled quarterly financial statement items to incorporate firm-level characteristics:
-        \begin{itemize}
-            \item Profitability metrics, such as return on assets (ROA), return on equity (ROE), and gross, operating, and net margins 
-            \item Growth metrics, including sales growth, asset growth, equity growth
-            \item Valuation ratios, such as book-to-market, earnings yield, cash-flow yield, and sales yield
-            \item Liquidity and leverage ratios, including current ratio, leverage, and cash holdings 
-        \end{itemize}
-        These fundamentals capture cross-sectional variation that evolves more slowly but is often predictive of medium-term equity behavior. 
-        \item \textbf{\textit{Macroeconomic Indicators.}} Daily or monthly macro variables aligned to trading days:
-        \begin{itemize}
-            \item Market volatility via VIX
-            \item Yield curve spreads (10Y–2Y, 10Y–3M)
-            \item Federal Funds Rate
-            \item Economic activity indicators, including industrial production, unemployment, and GDP 
-        \end{itemize}
-        These variables embed systematic risk dynamics and macro-sensitive return drivers. 
-        \item \textbf{\textit{Sector and Subsector Structure.}} Firm-level structure is incorporated using GICS (Global Industry Classification Standard) classifications:
-        \begin{itemize}
-            \item One-hot sector indicators 
-            \item One-hot subsector indicators 
-        \end{itemize}
-        These features encode economically meaningful groupings that help models recognize sector-specific return patterns and reduce cross-sectional confounding. 
+        \item \textbf{Price-Based Technical Features:} 
+        Multi-horizon moving averages, exponential moving averages, rolling-window returns, log volume, and other short-term indicators.
+        
+        \item \textbf{Fundamental Features:} 
+        Profitability metrics (ROA, ROE), margins (gross, operating, and net margins), growth rates, valuation ratios (book-to-market, earnings yield, cash-flow yield), and balance-sheet indicators (leverage, liquidity, cash holdings).
+        
+        \item \textbf{Macroeconomic Variables:} 
+        VIX, yield curve spreads, Fed Funds Rate, industrial production, unemployment, GDP, and other broad economic indicators.
+        
+        \item \textbf{Text Features:}
+        Sentiment scores derived from FinBERT (positive, negative, neutral classifications aggregated into daily measures such as mean sentiment, extremal sentiment, and news count), and 768-dimensional FinBERT text embeddings obtained from headlines and summaries and averaged within each stock-day to capture linguistic tone and narrative content.
+        
+        \item \textbf{Dimension Reduction:}
+        High-dimensional text embeddings are compressed into 64 components via PCA, preserving most of the variance while~reducing~computational~cost.
+
+        \item \textbf{Sector and Time Structure:}
+        One-hot sector and subsector classifications, plus day-of-week and month-of-year dummies capturing calendar seasonality.
     \end{itemize}
 
 
@@ -182,53 +160,35 @@ After gathering raw inputs, we construct a unified panel dataset at the (ticker,
     %     % This approach preserves the panel structure without imputing information from the future.
     % \end{itemize}
 
-        \item \textbf{Train–Validation–Test Split:}  
-    To avoid look-ahead bias, we split the dataset chronologically:
-    \begin{itemize}
-        \item 2016--2021 for training,
-        \item 2022 for validation,
-        \item 2023 for out-of-sample testing.
-    \end{itemize}
+    \item \textbf{Train--Validation--Test Split:}  
+    The data is segmented chronologically into:
+    \[
+    \text{Train: 2016--2021},\quad
+    \text{Validation: 2022},\quad
+    \text{Test: 2023}.
+    \]
+    This prevents information leakage and ensures realistic out-of-sample evaluation.
 
 \end{enumerate}
 
-This pipeline produces a complete, aligned dataset suitable for both prediction modeling and portfolio backtesting.
+\noindent The resulting dataset provides a multimodal view of cross-sectional and time-series drivers of equity behavior, providing a basis for evaluating the predictive contribution of different feature families.
 
 \section{Methodology}
-\subsection{Multimodality}
-
-\subsubsection*{Text Features}
-To incorporate unstructured information alongside traditional financial signals, we extract two types of text-based features from daily news headlines and summaries using the pretrained FinBERT model:
-
-\begin{itemize}
-    \item \textbf{Sentiment Scores.}  
-    A FinBERT sentiment classifier assigns each news item a positive, negative, or neutral label.  
-    For each stock and each day, we aggregate these predictions into summary measures such as mean sentiment, extremal sentiment, and news count.
-
-    \item \textbf{Text Embeddings.}  
-    Using the base FinBERT model, we obtain 768-dimensional contextual embeddings for each headline and summary.  
-    We compute the daily embedding for each stock by averaging all embeddings associated with its news on that date.
-\end{itemize}
-
-\noindent These features capture narrative tone, linguistic signals, and information flow not present in standard price or fundamental data.
-
-\subsubsection*{Dimension Reduction}
-Because daily embeddings are high-dimensional, we apply PCA to project them onto 64 components.  
-This retains the majority of the variance while keeping the modeling pipeline computationally manageable for a large cross-section of stocks.
-
 \subsection{Stock Next Day Return Prediction}
 \subsubsection*{Evaluation Metric}
-Since the goal of this project is to forecast next-day equity returns in a noisy, low-signal environment, the evaluation framework must reflect the decision-making requirements of a trading system. Although all models generate real-valued return predictions, the primary operational question is whether the model correctly anticipates the \emph{direction} of the next day's movement, as this determines the trading position taken.
+Because the goal is to forecast next-day equity returns in a noisy, low-signal environment, the evaluation framework must reflect practical trading considerations. Although models output real-valued return forecasts, the primary operational question is whether the model correctly anticipates the \emph{direction} of the next day's movement, as this determines the trading position taken.
 
-\noindent To align with this objective, we use \textbf{Directional Accuracy (DA)} as the central evaluation metric. DA measures the fraction of predictions whose sign matches the sign of the realized next-day return:
+\vspace{6pt}
+\noindent To align with this objective, we use \textbf{Directional Accuracy (DA)} as the evaluation metric. DA measures the fraction of predictions whose sign matches the sign of the realized next-day return:
 
 \[
 \text{DA} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}\left\{\, \operatorname{sign}(\hat{r}_i) = \operatorname{sign}(r_i) \,\right\},
 \]
 
 
-\noindent where $\hat{r}_i$ is the predicted next-day return, $r_i$ is the realized next-day return, and $\mathbf{1}\{\cdot\}$ is the indicator function. A DA of $50\%$ corresponds to random guessing in a balanced up/down environment, so improvements of even 1--2 percentage points are economically meaningful in this setting.
+\noindent where $\hat{r}_i$ is the predicted next-day return and $r_i$ is the realized next-day return. A DA of $50\%$ corresponds to random guessing in a balanced up/down environment, so even small improvements (1--2 percentage points) are economically meaningful.
 
+% TO UPDATE THE MODELS SECTION BELOW 
 \subsubsection{Baseline Models}
 
 % \begin{figure}[ht]
@@ -312,6 +272,194 @@ that serve as meaningful benchmarks for evaluating more flexible multimodal mode
 \subsubsection{XGBoost}
 \subsubsection{CatBoost}
 \subsubsection{LightGBM}
+
+\section{Baseline Models}
+
+We first construct a suite of deterministic baseline models applied uniformly across tickers:
+
+\subsection{Single-Rule Baselines}
+
+\begin{itemize}
+    \item \textbf{Persistence}: $\hat{r}_{t+1} = r_t$
+    \item \textbf{Moving Averages}: 3--63 day averages.
+    \item \textbf{Exponentially Weighted MAs}: EMA windows for momentum smoothing.
+    \item \textbf{Seasonal Rules (S1--S7)}:
+    \begin{itemize}
+        \item Same-day-last-year
+        \item Same-month-last-year
+        \item Month-of-year mean
+        \item Day-of-week mean
+        \item Long-horizon (21/63-day) rolling means
+    \end{itemize}
+\end{itemize}
+
+Results show DA values clustered near 50\%, with the strongest being the day-of-week and month-of-year seasonal patterns (up to $52\%$ DA on test).
+
+\subsection{Hybrid Baselines}
+
+We also allow simple rules to vary across segments:
+
+\begin{itemize}
+    \item \textbf{Per-Ticker}: choose best-performing baseline for each stock.
+    \item \textbf{Per-Month}: choose best baseline for each calendar month.
+    \item \textbf{Per-Day-of-Week}: choose best baseline for each weekday.
+\end{itemize}
+
+The per-ticker hybrid achieves the highest validation accuracy ($\approx 0.518$), though generalization remains limited ($\approx 0.504$ test).  
+The most frequently chosen signals were:
+\begin{itemize}
+    \item Day-of-week seasonal rule (selected for 143 tickers)
+    \item Long-horizon rolling means (59 tickers)
+    \item MA and EMA windows (various)
+\end{itemize}
+
+This motivates the engineered price features in the next stage.
+
+\section{Price-Only Machine Learning Models}
+
+\subsection{Engineered Signal Features}
+
+We construct price-based features closely aligned with patterns favored by the hybrid baselines:
+
+\begin{itemize}
+    \item Lagged returns ($b0$)
+    \item Moving averages: 2d, 1w, 2w, 1m, 30d, 50d
+    \item Rolling drift indicators (21d, 63d)
+    \item Seasonal means: day-of-week, month-of-year
+\end{itemize}
+
+These features form the \textbf{signal design matrix} for subsequent modeling.
+
+\subsection{Models Trained}
+
+\begin{itemize}
+    \item Linear Regression
+    \item XGBoost (baseline configuration)
+    \item XGBoost (grid-tuned)
+    \item KNN Regression
+    \item Support Vector Regression
+    \item Neural Network with ticker embeddings
+\end{itemize}
+
+\subsection{Key Findings}
+
+\begin{itemize}
+    \item Linear regression achieves roughly 50--51\% DA.
+    \item XGBoost outperforms linear models, reaching $\approx 0.528$ on validation and $\approx 0.509$ on test.
+    \item KNN and SVR underperform due to high dimensionality and noise.
+    \item Neural networks with ticker embeddings improve slightly but remain below tuned boosting models.
+    \item Ablation studies show that a compact subset of \textbf{seasonality + long-horizon drift} features nearly matches the full model.
+\end{itemize}
+
+\section{Core Structural Features}
+
+We introduce categorical and structural features:
+
+\begin{itemize}
+    \item Day-of-week (one-hot)
+    \item Month-of-year (one-hot)
+    \item Sector and subsector (from S\&P 500 metadata)
+    \item Volume and log-volume
+\end{itemize}
+
+Models trained on these features include linear regression, XGBoost, and LightGBM.
+
+The structural feature set consistently outperforms pure price-only:  
+tuned XGBoost reaches $\approx 0.521$ validation DA.
+
+\section{Combining Signals and Structural Features}
+
+We build a \textbf{signal + core} feature matrix including both engineered price signals and structural variables.  
+Across linear models, boosting methods, and neural networks, combined features consistently outperform either family alone.
+
+\subsection{DOW + Month + Sector as a Core Predictor Set}
+
+Ablations reveal that the following three groups carry the most robust signal:
+
+\[
+\text{Day-of-Week} \;+\; \text{Month-of-Year} \;+\; \text{Sector}
+\]
+
+This ``DMS'' set becomes the foundation for the final modeling stage.
+
+\section{Extending DMS With Fundamentals, Macro, Sentiment, and PCA Embeddings}
+
+Let $DMS$ denote the union of day-of-week, month, and sector dummies.  
+We extend DMS using the following families:
+
+\subsection{Fundamental Features}
+
+\begin{itemize}
+    \item Growth: sales\_growth\_qoq, sales\_growth\_ttm, asset\_growth
+    \item Profitability: roa\_ttm, roe\_ttm
+    \item Margins: gross / operating / net margin
+    \item Valuation: log\_mktcap, bm, earnings\_yield, cf\_yield, sales\_yield, div\_yield
+    \item Balance sheet: leverage, current\_ratio, cash\_assets, accruals\_ta
+\end{itemize}
+
+\subsection{Macroeconomic Features}
+
+\begin{itemize}
+    \item Inflation, Fed Funds, GDP, unemployment
+    \item Treasury yields (10y, 2y, 3m), corporate yield (AAA)
+    \item VIX, S\&P 500 index, yield spread 10y--2y
+\end{itemize}
+
+\subsection{Sentiment Features}
+
+\begin{itemize}
+    \item mean, max, min, sum sentiment
+    \item news count
+\end{itemize}
+
+\subsection{Text Embeddings}
+
+\begin{itemize}
+    \item PCA-reduced text embeddings: pca\_emb\_*
+\end{itemize}
+
+\section{Best Models (From Final Notebook)}
+
+We evaluate LightGBM with the following feature subsets:
+
+\subsection{Model A: Best Validation DA}
+
+LightGBM trained on:
+
+\[
+\text{DMS} + \{\log\_mktcap, bm, earnings\_yield, cf\_yield, roa\_ttm, roe\_ttm\}
+\]
+
+Achieves:
+\[
+    \mathrm{Val\,DA} \approx 0.522
+\]
+
+\subsection{Model B: Best Test DA}
+
+LightGBM trained on:
+
+\[
+\text{DMS} + \{\text{mean\_sentiment}\}
+\]
+
+Achieves:
+\[
+    \mathrm{Test\,DA} \approx 0.540
+\]
+
+\section{Conclusion}
+
+Across more than a dozen modeling configurations, several themes emerge:
+
+\begin{itemize}
+    \item Pure price-derived signals carry weak but usable predictive structure.
+    \item Core structural features, particularly day-of-week, month-of-year, and sector, are consistently predictive.
+    \item Combining signals with structural variables improves performance.
+    \item Adding fundamentals and sentiment on top of DMS leads to further gains.
+    \item LightGBM and CatBoost outperform linear models, XGBoost, and neural networks on this tabular data.
+    \item The strongest model tested was LightGBM using \textbf{DMS + mean sentiment}, achieving $\approx 0.54$ test directional accuracy.
+\end{itemize}
 
 
 \subsection{Robust Portfolio Optimization}
