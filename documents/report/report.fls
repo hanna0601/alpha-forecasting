@@ -291,6 +291,8 @@ INPUT /usr/local/texlive/2020/texmf-dist/tex/latex/tools/tabularx.sty
 INPUT /usr/local/texlive/2020/texmf-dist/tex/latex/tools/tabularx.sty
 INPUT /usr/local/texlive/2020/texmf-dist/tex/latex/tools/array.sty
 INPUT /usr/local/texlive/2020/texmf-dist/tex/latex/tools/array.sty
+INPUT /usr/local/texlive/2020/texmf-dist/tex/latex/enumitem/enumitem.sty
+INPUT /usr/local/texlive/2020/texmf-dist/tex/latex/enumitem/enumitem.sty
 INPUT /usr/local/texlive/2020/texmf-dist/tex/latex/listings/lstlang1.sty
 INPUT /usr/local/texlive/2020/texmf-dist/tex/latex/listings/lstlang1.sty
 INPUT /Users/Catherine/Documents/ MIT/ Fall/15.095 Machine Learning/Project/alpha-forecasting/documents/report/report.aux

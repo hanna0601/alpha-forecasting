@@ -15,6 +15,8 @@
 \usepackage{float}
 \usepackage[colorlinks=true, urlcolor=black, linkcolor=black]{hyperref}
 \usepackage{tabularx}
+\usepackage{enumitem}
+\setlist[itemize]{itemsep=2pt, topsep=2pt, parsep=0pt, partopsep=0pt}
 
 
 % -------------------------------------------------
@@ -218,18 +220,9 @@ These models apply the same fixed rule across all stocks and dates:
 This suggests that coarse calendar structure generalizes more reliably than short-horizon momentum signals.
 
 \subsubsection*{Hybrid Baselines}
+To relax the ``one-rule-for-all'' constraint, we evaluate hybrid baselines that allow different segments of the data to select their preferred single-rule predictor based on 2016--2022 performance. 
+Specifically, we consider selection at the stock level (per-ticker), at the calendar-month level (per-month), and at the weekday level (per-day-of-week).
 
-To relax the ``one-rule-for-all'' constraint, we evaluate hybrid baselines that allow different 
-segments of the data to select their own preferred single-rule predictor based on 
-2016--2022 performance:
-
-\begin{itemize}
-    \item \textbf{Per-ticker:} choose best-performing baseline for each stock. 
-    \item \textbf{Per-month:} choose best baseline for each calendar month. 
-    \item \textbf{Per-day-of-week:} choose best baseline for each weekday. 
-\end{itemize}
-
-\vspace{-10pt}
 \begin{table}[H]
 \centering
 \begin{tabular}{lcc}
@@ -257,14 +250,9 @@ Linear regression and gradient-boosted tree models are trained on this price-onl
 These experiments show that a small number of price-based features captures most of the available predictive information, while larger feature sets mainly improve in-sample fit rather than out-of-sample performance.
 
 \vspace{6pt}
-\noindent Then, we shift focus to a set of core structural features designed to capture persistent cross-sectional information, including calendar indicators, sector and subsector classifications, and volume-based measures. 
-Both linear regression and XGBoost models are trained on this structural feature set. 
-Relative to price-only specifications, models using structural features deliver more stable and consistent performance, highlighting the importance of calendar effects and sector-level structure in short-horizon return prediction.
-
-\vspace{6pt}
-\noindent Building on these findings, we combine price signals with core structural features and re-estimate tree-based models. 
-While this combined representation improves flexibility, subsequent feature ablation indicates that most of the predictive power originates from a compact subset of structural variables rather than from the full signal set. 
-In particular, day-of-week, month-of-year, and sector indicators emerge as the most robust and generalizable predictors across model specifications.
+\noindent Then, we shift focus to a set of core structural features, including calendar indicators, sector and subsector classifications, and volume-based measures. 
+Models trained on these features deliver more stable and consistent performance than price-only specifications, highlighting the importance of calendar effects and sector-level structure at short horizons. Combining price signals with structural features provides additional flexibility, but subsequent ablation reveals that most predictive power originates from a compact subset of structural variables. 
+In particular, day-of-week, month-of-year, and sector indicators consistently emerge as the most robust and generalizable predictors.
 
 \vspace{6pt}
 \noindent Finally, because ticker identifiers are excluded from the tabular feature space to avoid high-dimensional sparsity, we explore alternative approaches to incorporate firm-specific information, including neural networks with ticker embeddings and tree-based models that natively handle categorical identifiers. 
@@ -326,24 +314,16 @@ DMS + Categorical Ticker
 \subsubsection{Extending DMS with Additional Feature Families}
 
 Having identified day-of-week, month-of-year, and sector indicators (DMS) as the most robust and generalizable core predictors, we next evaluate whether incorporating additional sources of information can further improve predictive performance. 
-We extend the DMS feature set by incrementally adding firm fundamentals, macroeconomic variables, and news-based sentiment features, providing a complementary view of information flow not present in prices or structural indicators.
-
-\vspace{6pt}
-\noindent All feature extensions are evaluated using tree-based gradient boosting methods (XGBoost, CatBoost, and LightGBM), which consistently outperform linear and neural models in earlier stages of the analysis.
+We extend the DMS feature set by incrementally adding firm fundamentals, macroeconomic variables, and news-based sentiment features. All feature extensions are evaluated using tree-based gradient boosting methods (XGBoost, CatBoost, and LightGBM), which consistently outperform linear and neural models in earlier stages of the analysis.
 
 \subsubsection*{Results}
-\noindent Incorporating additional feature families on top of the DMS core yields heterogeneous effects across modalities. 
-Adding firm-level fundamental variables does not improve predictive performance and typically reduces both validation and test directional accuracy relative to DMS alone. 
-This indicates that at a one-day horizon, slow-moving fundamentals contribute limited incremental information beyond calendar and sector structure and may introduce noise.
+\noindent Extending the DMS core with additional feature families yields heterogeneous effects. 
+Adding firm-level fundamentals does not improve performance and often reduces both validation and test directional accuracy, suggesting that slow-moving accounting variables add little incremental information at a one-day horizon and may introduce noise.
+Macroeconomic variables similarly offer limited gains once calendar and sector structure are controlled for, as their effects appear largely absorbed by the DMS features.
 
 \vspace{6pt}
-\noindent Macroeconomic variables, while economically meaningful, offer similarly limited incremental predictive power once calendar effects and sector structure are controlled for. 
-Their influence appears largely absorbed by the DMS features, likely because broad macro conditions evolve slowly and affect equities primarily through sector-level channels already captured by the model.
-
-\vspace{6pt}
-\noindent In contrast, sentiment features derived from news data exhibit mixed but informative behavior. 
-Simple aggregate measures, such as mean sentiment, consistently improve out-of-sample performance, suggesting that high-level shifts in news tone provide useful signals beyond prices and structural effects. 
-More complex sentiment dynamics and high-dimensional text embeddings do not yield further gains and, in some cases, degrade performance, indicating that these features introduce noise relative to their marginal informational value at short horizons.
+\noindent In contrast, news-based sentiment features provide meaningful incremental value when summarized using simple aggregates such as mean sentiment. 
+More complex sentiment dynamics and high-dimensional text embeddings do not yield further improvements and can degrade performance, indicating unfavorable signal-to-noise trade-offs at short horizons.
 
 \vspace{6pt}
 \noindent Among all configurations evaluated, LightGBM consistently delivers the strongest performance. 
@@ -496,8 +476,7 @@ To compare the predictive contribution of different input modalities, we evaluat
     \label{fig:model_performance_comparison}
 \end{figure}
 \noindent \textbf{Interpretation.}  
-Across all models, directional accuracy remains in the narrow range of $0.51$–$0.54$, consistent with well-known limits on daily return predictability. Several patterns emerge. First, all models outperform a naïve random-guessing benchmark (50\%), confirming that even simple tabular signals contain economically meaningful information. Second, the \textit{Fundamentals} and \textit{Mean Sentiment} models achieve the highest test accuracy (approximately $0.540$), indicating that slow-moving valuation ratios and high-level news sentiment indicators are the most stable predictors in our dataset. Third, adding PCA-based text embeddings does not improve performance and, in some cases, slightly reduces accuracy; this suggests that embeddings introduce additional noise relative to their marginal predictive value in daily horizons. Finally, the full \textit{News Momentum} feature set yields modest gains over mean sentiment alone, but the improvement is not consistently reflected on the validation and test splits, which indicates overfitting.  
-
+Across all models, directional accuracy remains in the narrow range of $0.51$–$0.54$, consistent with well-known limits on daily return predictability. All specifications outperform a random-guessing benchmark, indicating that even simple tabular signals contain economically meaningful information. Models incorporating fundamentals or mean news sentiment achieve the strongest test performance, suggesting that slow-moving valuation measures and aggregate sentiment are the most stable predictors. In contrast, PCA-based text embeddings do not improve accuracy and often degrade it, implying an unfavorable signal-to-noise trade-off at daily horizons. Richer news momentum features provide limited incremental gains and exhibit signs of overfitting.
 
 \subsection*{Portfolio Performance under CVaR Optimization with Different Feature Sets}
 \begin{figure}[H]
@@ -547,8 +526,9 @@ DMS + News Momentum + Embeddings
 \caption{Performance and Information Coefficient (IC) Statistics for Different Feature Sets}
 \label{tab:performance_ic}
 \end{table}\noindent \textbf{Interpretation.}
-Table~\ref{tab:performance_ic} summarizes both economic performance and statistical signal quality. The \textit{Sharpe ratio} and \textit{annualized return} reflect how well each model performs when translated into a trading strategy, while the \textit{Information Coefficient (IC)} measures the cross-sectional correlation between predicted and realized returns. The \textit{Information Ratio (IR)} indicates the stability of this signal over time.\\
+Table~\ref{tab:performance_ic} summarizes both economic performance and statistical signal quality.~The \textit{Sharpe ratio} and \textit{annualized return} summarize portfolio performance, while the \textit{Information Coefficient (IC)} and \textit{Information Ratio (IR)} measure the cross-sectional predictive strength and stability. 
 
+\vspace{6pt}
 \noindent Fundamentals and mean sentiment deliver the strongest performance, with the highest Sharpe ratios ($\approx 1.14$–$1.17$) and mean IC values ($\approx 0.027$–$0.028$). This suggests that slow-moving fundamentals and aggregate sentiment remain the most reliable predictors at a daily horizon. Adding text embeddings consistently reduces both Sharpe and IC, indicating that high-dimensional embeddings introduce noise rather than improving predictability. News momentum features offer moderate improvements in IC stability (higher IR) but do not outperform fundamentals in realized portfolio performance. Overall, simpler feature sets provide clearer and more stable signals than embedding-augmented models.
 
 \section{Discussion and Conclusion}
