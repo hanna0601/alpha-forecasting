@@ -5,33 +5,13 @@
 \BOOKMARK [1][-]{section.3}{Methodology}{}% 5
 \BOOKMARK [2][-]{subsection.3.1}{Stock Next Day Return Prediction}{section.3}% 6
 \BOOKMARK [3][-]{subsubsection.3.1.1}{Baseline Models}{subsection.3.1}% 7
-\BOOKMARK [3][-]{subsubsection.3.1.2}{XGBoost}{subsection.3.1}% 8
-\BOOKMARK [3][-]{subsubsection.3.1.3}{CatBoost}{subsection.3.1}% 9
-\BOOKMARK [3][-]{subsubsection.3.1.4}{LightGBM}{subsection.3.1}% 10
-\BOOKMARK [1][-]{section.4}{Baseline Models}{}% 11
-\BOOKMARK [2][-]{subsection.4.1}{Single-Rule Baselines}{section.4}% 12
-\BOOKMARK [2][-]{subsection.4.2}{Hybrid Baselines}{section.4}% 13
-\BOOKMARK [1][-]{section.5}{Price-Only Machine Learning Models}{}% 14
-\BOOKMARK [2][-]{subsection.5.1}{Engineered Signal Features}{section.5}% 15
-\BOOKMARK [2][-]{subsection.5.2}{Models Trained}{section.5}% 16
-\BOOKMARK [2][-]{subsection.5.3}{Key Findings}{section.5}% 17
-\BOOKMARK [1][-]{section.6}{Core Structural Features}{}% 18
-\BOOKMARK [1][-]{section.7}{Combining Signals and Structural Features}{}% 19
-\BOOKMARK [2][-]{subsection.7.1}{DOW + Month + Sector as a Core Predictor Set}{section.7}% 20
-\BOOKMARK [1][-]{section.8}{Extending DMS With Fundamentals, Macro, Sentiment, and PCA Embeddings}{}% 21
-\BOOKMARK [2][-]{subsection.8.1}{Fundamental Features}{section.8}% 22
-\BOOKMARK [2][-]{subsection.8.2}{Macroeconomic Features}{section.8}% 23
-\BOOKMARK [2][-]{subsection.8.3}{Sentiment Features}{section.8}% 24
-\BOOKMARK [2][-]{subsection.8.4}{Text Embeddings}{section.8}% 25
-\BOOKMARK [1][-]{section.9}{Best Models \(From Final Notebook\)}{}% 26
-\BOOKMARK [2][-]{subsection.9.1}{Model A: Best Validation DA}{section.9}% 27
-\BOOKMARK [2][-]{subsection.9.2}{Model B: Best Test DA}{section.9}% 28
-\BOOKMARK [1][-]{section.10}{Conclusion}{}% 29
-\BOOKMARK [2][-]{subsection.10.1}{Robust Portfolio Optimization}{section.10}% 30
-\BOOKMARK [3][-]{subsubsection.10.1.1}{CVaR Formulation}{subsection.10.1}% 31
-\BOOKMARK [3][-]{subsubsection.10.1.2}{Rolling Scenario Construction}{subsection.10.1}% 32
-\BOOKMARK [3][-]{subsubsection.10.1.3}{Optimization Objective and Constraints}{subsection.10.1}% 33
-\BOOKMARK [3][-]{subsubsection.10.1.4}{Backtesting Procedure}{subsection.10.1}% 34
-\BOOKMARK [1][-]{section.11}{Results}{}% 35
-\BOOKMARK [1][-]{section.12}{Discussion and Conclusion}{}% 36
-\BOOKMARK [1][-]{section.13}{Contribution}{}% 37
+\BOOKMARK [3][-]{subsubsection.3.1.2}{From Baseline Signals to Multimodal Machine Learning Models}{subsection.3.1}% 8
+\BOOKMARK [3][-]{subsubsection.3.1.3}{Extending DMS with Additional Feature Families}{subsection.3.1}% 9
+\BOOKMARK [2][-]{subsection.3.2}{Robust Portfolio Optimization}{section.3}% 10
+\BOOKMARK [3][-]{subsubsection.3.2.1}{CVaR Formulation}{subsection.3.2}% 11
+\BOOKMARK [3][-]{subsubsection.3.2.2}{Rolling Scenario Construction}{subsection.3.2}% 12
+\BOOKMARK [3][-]{subsubsection.3.2.3}{Optimization Objective and Constraints}{subsection.3.2}% 13
+\BOOKMARK [3][-]{subsubsection.3.2.4}{Backtesting Procedure}{subsection.3.2}% 14
+\BOOKMARK [1][-]{section.4}{Results}{}% 15
+\BOOKMARK [1][-]{section.5}{Discussion and Conclusion}{}% 16
+\BOOKMARK [1][-]{section.6}{Contribution}{}% 17

@@ -14,6 +14,7 @@
 \usepackage{hyphenat}
 \usepackage{float}
 \usepackage[colorlinks=true, urlcolor=black, linkcolor=black]{hyperref}
+\usepackage{tabularx}
 
 
 % -------------------------------------------------
@@ -188,7 +189,6 @@ Because the goal is to forecast next-day equity returns in a noisy, low-signal e
 
 \noindent where $\hat{r}_i$ is the predicted next-day return and $r_i$ is the realized next-day return. A DA of $50\%$ corresponds to random guessing in a balanced up/down environment, so even small improvements (1--2 percentage points) are economically meaningful.
 
-% TO UPDATE THE MODELS SECTION BELOW 
 \subsubsection{Baseline Models}
 
 % \begin{figure}[ht]
@@ -198,34 +198,24 @@ Because the goal is to forecast next-day equity returns in a noisy, low-signal e
 %     \label{fig:top5_baseline}
 % \end{figure}
 
-Before introducing flexible machine learning methods, we construct a suite of simple, 
-deterministic forecasting rules. These baselines serve two purposes:  
-(i) to provide interpretable benchmarks grounded in standard quantitative finance heuristics 
-(e.g., momentum and seasonality), and  
-(ii) to quantify how much apparent predictability can arise from rule selection rather than 
-genuine signal.
-
-\noindent All baseline models are evaluated on the same S\&P~500 daily return panel using the 
-2016--2022 train--validation period and the 2023 test set.
+Before introducing flexible machine learning methods, we evaluate a set of simple, deterministic forecasting rules. 
+These baselines serve two purposes: (i) to provide interpretable benchmarks grounded in standard quantitative finance heuristics such as momentum and seasonality, and (ii) to assess how much apparent predictability can arise from rule selection rather than genuine signal. 
+All baselines are evaluated on the same S\&P~500 daily return panel using the 2016--2022 train--validation period and the 2023 test set.
 
 \subsubsection*{Single-Rule Baselines}
 
 These models apply the same fixed rule across all stocks and dates:
 
 \begin{itemize}
-    \item \textbf{Naive persistence:} predicts tomorrow's return as today's return.
-    \item \textbf{Moving averages (MA):} simple averages over windows such as 2--60 days.
-    \item \textbf{Exponential moving averages (EMA):} exponentially weighted versions of MA rules.
-    \item \textbf{Seasonal rules (S1--S7):} include same-day-last-year, same-month-last-year, 
-    month-of-year means, day-of-week means, and rolling long-horizon averages (21-day, 63-day).
+    \item \textbf{Naive persistence:} predicts the next-day return using the current day's return.
+    \item \textbf{Moving averages (MA):} simple averages over windows ranging from 3 to 60 trading days.
+    \item \textbf{Exponential moving averages (EMA):} exponentially weighted versions of MA rules that emphasize more recent observations.
+    \item \textbf{Seasonal rules (S1--S7):} calendar-based predictors, including same-day-last-year, same-month-last-year, 
+    month-of-year means, day-of-week means, and rolling long-horizon averages.
 \end{itemize}
 
-\noindent Directional accuracy for these rules generally clusters around 50\%.  
-The persistence rule performs at chance, short-horizon MA/EMA rules yield modest improvements 
-(50.2--50.5\% in-sample, reverting toward 50\% on test), and several seasonal rules stand out.  
-The day-of-week mean achieves roughly 50.6\% train--validation accuracy and 50.9\% on the test set, 
-and the month-of-year mean reaches nearly 52\% on test, suggesting that coarse calendar structure 
-generalizes better than aggressively tuned short-term momentum rules.
+\noindent Across these baselines, directional accuracy remains close to the 50\% benchmark, with the strongest performance coming from calendar-based rules, particularly month-of-year seasonality. 
+This suggests that coarse calendar structure generalizes more reliably than short-horizon momentum signals.
 
 \subsubsection*{Hybrid Baselines}
 
@@ -234,233 +224,158 @@ segments of the data to select their own preferred single-rule predictor based o
 2016--2022 performance:
 
 \begin{itemize}
-    \item \textbf{Per-ticker:} each stock selects its best single-rule baseline.
-    \item \textbf{Per-month:} each calendar month selects its best rule.
-    \item \textbf{Per-day-of-week:} each weekday selects its best rule.
+    \item \textbf{Per-ticker:} choose best-performing baseline for each stock. 
+    \item \textbf{Per-month:} choose best baseline for each calendar month. 
+    \item \textbf{Per-day-of-week:} choose best baseline for each weekday. 
 \end{itemize}
 
-\begin{center}
+\vspace{-10pt}
+\begin{table}[H]
+\centering
 \begin{tabular}{lcc}
 \toprule
 \textbf{Hybrid Method} & \textbf{Train+Val DA} & \textbf{Test DA} \\
 \midrule
-Per-ticker   & 0.5185 & 0.5044 \\
-Per-month    & 0.5144 & 0.5110 \\
-Per-day-of-week & 0.5119 & 0.5040 \\
+Per-ticker        & 0.5185 & 0.5044 \\
+Per-month         & 0.5144 & 0.5110 \\
+Per-day-of-week   & 0.5119 & 0.5040 \\
 \bottomrule
 \end{tabular}
-\end{center}
+\caption{Performance of Hybrid Baseline Models}
+\label{tab:hybrid_baselines}
+\end{table}
 
-\noindent The per-ticker method attains the highest in-sample accuracy but does not generalize well, 
-while the month-of-year hybrid yields the most stable out-of-sample performance.  
-Notably, the hybrid selections reveal recurring patterns: the day-of-week average is chosen 
-for 143 tickers, long-horizon rolling means for 59, and several MA/EMA windows (50-day EMA, 
-1-month, 3-day, 14-day) are frequently selected.  
-These patterns indicate that calendar structure and slower-moving return components are the 
-most consistently useful simple predictors, and they inform which feature families are emphasized 
-in the subsequent machine learning models.
+\noindent The per-ticker method achieves the highest in-sample accuracy but does not generalize well, 
+whereas the month-of-year hybrid yields the most stable out-of-sample performance.  
+Based on the frequency with which each rule is selected, the results suggest that calendar structure and slower-moving return components are the most consistently useful simple predictors, 
+and these features were utilized in the subsequent machine learning models.
 
-\subsubsection*{Summary}
+\subsubsection{From Baseline Signals to Multimodal Machine Learning Models}
 
-Overall, the baseline results confirm that next-day return prediction is extremely noisy:  
-simple rules rarely exceed 51\% accuracy.  
-Nonetheless, seasonality and long-horizon momentum effects provide weak but persistent signals 
-that serve as meaningful benchmarks for evaluating more flexible multimodal models.
+\noindent We begin by mapping the price patterns identified by the baseline models into model features and evaluating how much predictive structure can be extracted from these signals alone. 
+Linear regression and gradient-boosted tree models are trained on this price-only feature set, followed by feature ablation to assess the contribution of individual signals. 
+These experiments show that a small number of price-based features captures most of the available predictive information, while larger feature sets mainly improve in-sample fit rather than out-of-sample performance.
 
+\vspace{6pt}
+\noindent Then, we shift focus to a set of core structural features designed to capture persistent cross-sectional information, including calendar indicators, sector and subsector classifications, and volume-based measures. 
+Both linear regression and XGBoost models are trained on this structural feature set. 
+Relative to price-only specifications, models using structural features deliver more stable and consistent performance, highlighting the importance of calendar effects and sector-level structure in short-horizon return prediction.
 
+\vspace{6pt}
+\noindent Building on these findings, we combine price signals with core structural features and re-estimate tree-based models. 
+While this combined representation improves flexibility, subsequent feature ablation indicates that most of the predictive power originates from a compact subset of structural variables rather than from the full signal set. 
+In particular, day-of-week, month-of-year, and sector indicators emerge as the most robust and generalizable predictors across model specifications.
 
-\subsubsection{XGBoost}
-\subsubsection{CatBoost}
-\subsubsection{LightGBM}
+\vspace{6pt}
+\noindent Finally, because ticker identifiers are excluded from the tabular feature space to avoid high-dimensional sparsity, we explore alternative approaches to incorporate firm-specific information, including neural networks with ticker embeddings and tree-based models that natively handle categorical identifiers. 
+These experiments motivate the use of the Day--Month--Sector (DMS) feature set as the foundation for subsequent multimodal extensions.
 
-\section{Baseline Models}
+\begin{table}[H]
+\centering
+\caption{Directional Accuracy Across Feature Sets and Model Classes}
+\label{tab:model_progression}
+\begin{tabularx}{\textwidth}{X X c c}
+\toprule
+\textbf{Feature Set} & \textbf{Model Class} & \textbf{Val DA} & \textbf{Test DA} \\
+\midrule
+Price-based signals 
+    & Linear Regression 
+    & 0.4867 & 0.4957 \\
 
-We first construct a suite of deterministic baseline models applied uniformly across tickers:
+Price-based signals 
+    & XGBoost (Top-3 Price Features) 
+    & 0.4934 & 0.5177 \\
 
-\subsection{Single-Rule Baselines}
+Price-based signals 
+    & XGBoost (Top-15 Price Features) 
+    & 0.5016 & 0.5168 \\
 
-\begin{itemize}
-    \item \textbf{Persistence}: $\hat{r}_{t+1} = r_t$
-    \item \textbf{Moving Averages}: 3--63 day averages.
-    \item \textbf{Exponentially Weighted MAs}: EMA windows for momentum smoothing.
-    \item \textbf{Seasonal Rules (S1--S7)}:
-    \begin{itemize}
-        \item Same-day-last-year
-        \item Same-month-last-year
-        \item Month-of-year mean
-        \item Day-of-week mean
-        \item Long-horizon (21/63-day) rolling means
-    \end{itemize}
-\end{itemize}
+\midrule
+Core structural features 
+    & Linear Regression
+    & 0.4805 & 0.5132 \\
 
-Results show DA values clustered near 50\%, with the strongest being the day-of-week and month-of-year seasonal patterns (up to $52\%$ DA on test).
+Core structural features 
+    & XGBoost 
+    & 0.5166 & 0.5214 \\
 
-\subsection{Hybrid Baselines}
+Price signals + structural features 
+    & XGBoost 
+    & 0.5136 & 0.5139 \\
 
-We also allow simple rules to vary across segments:
+\midrule
+DMS 
+    & XGBoost
+    & 0.5146 & 0.5281 \\
 
-\begin{itemize}
-    \item \textbf{Per-Ticker}: choose best-performing baseline for each stock.
-    \item \textbf{Per-Month}: choose best baseline for each calendar month.
-    \item \textbf{Per-Day-of-Week}: choose best baseline for each weekday.
-\end{itemize}
+DMS 
+    & LightGBM 
+    & 0.5169 & 0.5280 \\
 
-The per-ticker hybrid achieves the highest validation accuracy ($\approx 0.518$), though generalization remains limited ($\approx 0.504$ test).  
-The most frequently chosen signals were:
-\begin{itemize}
-    \item Day-of-week seasonal rule (selected for 143 tickers)
-    \item Long-horizon rolling means (59 tickers)
-    \item MA and EMA windows (various)
-\end{itemize}
+DMS + Ticker embeddings
+    & Neural Network
+    & 0.4931 & 0.5199 \\
 
-This motivates the engineered price features in the next stage.
+DMS + Categorical Ticker
+    & CatBoost 
+    & 0.5179 & 0.5354 \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-\section{Price-Only Machine Learning Models}
+\subsubsection{Extending DMS with Additional Feature Families}
 
-\subsection{Engineered Signal Features}
+Having identified day-of-week, month-of-year, and sector indicators (DMS) as the most robust and generalizable core predictors, we next evaluate whether incorporating additional sources of information can further improve predictive performance. 
+We extend the DMS feature set by incrementally adding firm fundamentals, macroeconomic variables, and news-based sentiment features, providing a complementary view of information flow not present in prices or structural indicators.
 
-We construct price-based features closely aligned with patterns favored by the hybrid baselines:
+\vspace{6pt}
+\noindent All feature extensions are evaluated using tree-based gradient boosting methods (XGBoost, CatBoost, and LightGBM), which consistently outperform linear and neural models in earlier stages of the analysis.
 
-\begin{itemize}
-    \item Lagged returns ($b0$)
-    \item Moving averages: 2d, 1w, 2w, 1m, 30d, 50d
-    \item Rolling drift indicators (21d, 63d)
-    \item Seasonal means: day-of-week, month-of-year
-\end{itemize}
+\subsubsection*{Results}
+\noindent Incorporating additional feature families on top of the DMS core yields heterogeneous effects across modalities. 
+Adding firm-level fundamental variables does not improve predictive performance and typically reduces both validation and test directional accuracy relative to DMS alone. 
+This indicates that at a one-day horizon, slow-moving fundamentals contribute limited incremental information beyond calendar and sector structure and may introduce noise.
 
-These features form the \textbf{signal design matrix} for subsequent modeling.
+\vspace{6pt}
+\noindent Macroeconomic variables, while economically meaningful, offer similarly limited incremental predictive power once calendar effects and sector structure are controlled for. 
+Their influence appears largely absorbed by the DMS features, likely because broad macro conditions evolve slowly and affect equities primarily through sector-level channels already captured by the model.
 
-\subsection{Models Trained}
+\vspace{6pt}
+\noindent In contrast, sentiment features derived from news data exhibit mixed but informative behavior. 
+Simple aggregate measures, such as mean sentiment, consistently improve out-of-sample performance, suggesting that high-level shifts in news tone provide useful signals beyond prices and structural effects. 
+More complex sentiment dynamics and high-dimensional text embeddings do not yield further gains and, in some cases, degrade performance, indicating that these features introduce noise relative to their marginal informational value at short horizons.
 
-\begin{itemize}
-    \item Linear Regression
-    \item XGBoost (baseline configuration)
-    \item XGBoost (grid-tuned)
-    \item KNN Regression
-    \item Support Vector Regression
-    \item Neural Network with ticker embeddings
-\end{itemize}
+\vspace{6pt}
+\noindent Among all configurations evaluated, LightGBM consistently delivers the strongest performance. 
+Two specifications are particularly notable. 
+The model achieving the best validation performance combines the DMS feature set with a small subset of firm-level fundamental variables, capturing valuation and profitability characteristics. 
+In contrast, the model achieving the strongest out-of-sample performance augments DMS with mean news sentiment, indicating that aggregate shifts in news tone provide incremental predictive value beyond structural features alone.
 
-\subsection{Key Findings}
+\begin{table}[H]
+\centering
+\caption{Best-Performing Models}
+\label{tab:best_models}
+\begin{tabular}{llcc}
+\toprule
+\textbf{Feature Set} 
+& \textbf{Model Class} 
+& \textbf{Val DA} 
+& \textbf{Test DA} \\
+\midrule
 
-\begin{itemize}
-    \item Linear regression achieves roughly 50--51\% DA.
-    \item XGBoost outperforms linear models, reaching $\approx 0.528$ on validation and $\approx 0.509$ on test.
-    \item KNN and SVR underperform due to high dimensionality and noise.
-    \item Neural networks with ticker embeddings improve slightly but remain below tuned boosting models.
-    \item Ablation studies show that a compact subset of \textbf{seasonality + long-horizon drift} features nearly matches the full model.
-\end{itemize}
+DMS + Selected Fundamentals
+& LightGBM
+& \textbf{0.5218}
+& 0.5272 \\
 
-\section{Core Structural Features}
+DMS + Mean Sentiment
+& LightGBM
+& 0.5143
+& \textbf{0.5398} \\
 
-We introduce categorical and structural features:
-
-\begin{itemize}
-    \item Day-of-week (one-hot)
-    \item Month-of-year (one-hot)
-    \item Sector and subsector (from S\&P 500 metadata)
-    \item Volume and log-volume
-\end{itemize}
-
-Models trained on these features include linear regression, XGBoost, and LightGBM.
-
-The structural feature set consistently outperforms pure price-only:  
-tuned XGBoost reaches $\approx 0.521$ validation DA.
-
-\section{Combining Signals and Structural Features}
-
-We build a \textbf{signal + core} feature matrix including both engineered price signals and structural variables.  
-Across linear models, boosting methods, and neural networks, combined features consistently outperform either family alone.
-
-\subsection{DOW + Month + Sector as a Core Predictor Set}
-
-Ablations reveal that the following three groups carry the most robust signal:
-
-\[
-\text{Day-of-Week} \;+\; \text{Month-of-Year} \;+\; \text{Sector}
-\]
-
-This ``DMS'' set becomes the foundation for the final modeling stage.
-
-\section{Extending DMS With Fundamentals, Macro, Sentiment, and PCA Embeddings}
-
-Let $DMS$ denote the union of day-of-week, month, and sector dummies.  
-We extend DMS using the following families:
-
-\subsection{Fundamental Features}
-
-\begin{itemize}
-    \item Growth: sales\_growth\_qoq, sales\_growth\_ttm, asset\_growth
-    \item Profitability: roa\_ttm, roe\_ttm
-    \item Margins: gross / operating / net margin
-    \item Valuation: log\_mktcap, bm, earnings\_yield, cf\_yield, sales\_yield, div\_yield
-    \item Balance sheet: leverage, current\_ratio, cash\_assets, accruals\_ta
-\end{itemize}
-
-\subsection{Macroeconomic Features}
-
-\begin{itemize}
-    \item Inflation, Fed Funds, GDP, unemployment
-    \item Treasury yields (10y, 2y, 3m), corporate yield (AAA)
-    \item VIX, S\&P 500 index, yield spread 10y--2y
-\end{itemize}
-
-\subsection{Sentiment Features}
-
-\begin{itemize}
-    \item mean, max, min, sum sentiment
-    \item news count
-\end{itemize}
-
-\subsection{Text Embeddings}
-
-\begin{itemize}
-    \item PCA-reduced text embeddings: pca\_emb\_*
-\end{itemize}
-
-\section{Best Models (From Final Notebook)}
-
-We evaluate LightGBM with the following feature subsets:
-
-\subsection{Model A: Best Validation DA}
-
-LightGBM trained on:
-
-\[
-\text{DMS} + \{\log\_mktcap, bm, earnings\_yield, cf\_yield, roa\_ttm, roe\_ttm\}
-\]
-
-Achieves:
-\[
-    \mathrm{Val\,DA} \approx 0.522
-\]
-
-\subsection{Model B: Best Test DA}
-
-LightGBM trained on:
-
-\[
-\text{DMS} + \{\text{mean\_sentiment}\}
-\]
-
-Achieves:
-\[
-    \mathrm{Test\,DA} \approx 0.540
-\]
-
-\section{Conclusion}
-
-Across more than a dozen modeling configurations, several themes emerge:
-
-\begin{itemize}
-    \item Pure price-derived signals carry weak but usable predictive structure.
-    \item Core structural features, particularly day-of-week, month-of-year, and sector, are consistently predictive.
-    \item Combining signals with structural variables improves performance.
-    \item Adding fundamentals and sentiment on top of DMS leads to further gains.
-    \item LightGBM and CatBoost outperform linear models, XGBoost, and neural networks on this tabular data.
-    \item The strongest model tested was LightGBM using \textbf{DMS + mean sentiment}, achieving $\approx 0.54$ test directional accuracy.
-\end{itemize}
-
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Robust Portfolio Optimization}
 
@@ -574,8 +489,8 @@ To compare the predictive contribution of different input modalities, we evaluat
 
 \subsection*{Directional Accuracy for LightGBM Models with Different Feature Sets}
 \begin{figure}[H]
-    % \hspace*{-1.5cm} % adjust horizontal position
-    \center
+    % \hspace*{-1.5cm}
+    \centering
     \includegraphics[width=0.8\linewidth]{../figures/model_performance_comparison.pdf}
     \caption{Directional accuracy for LightGBM models trained with different feature sets.}
     \label{fig:model_performance_comparison}
@@ -594,8 +509,6 @@ Across all models, directional accuracy remains in the narrow range of $0.51$–
 
 \begin{table}[H]
 \centering
-\caption{Performance and Information Coefficient (IC) Statistics for Different Feature Sets}
-\label{tab:performance_ic}
 \begin{tabular}{lccccc}
 \toprule
 \textbf{Model} 
@@ -604,7 +517,6 @@ Across all models, directional accuracy remains in the narrow range of $0.51$–
     & \textbf{Mean IC} 
     & \textbf{IR} \\
 \midrule
-
 DMS + Fundamentals                 
     & \textbf{1.166} 
     & \textbf{10.84} 
@@ -625,7 +537,6 @@ DMS + News Momentum
     & 8.32 
     & 0.02786 
     & 0.1906  \\
-
 DMS + News Momentum + Embeddings   
     & 0.654 
     & 6.07 
@@ -633,15 +544,38 @@ DMS + News Momentum + Embeddings
     & 0.1312  \\
 \bottomrule
 \end{tabular}
-\end{table}
-\noindent \textbf{Interpretation.}
+\caption{Performance and Information Coefficient (IC) Statistics for Different Feature Sets}
+\label{tab:performance_ic}
+\end{table}\noindent \textbf{Interpretation.}
 Table~\ref{tab:performance_ic} summarizes both economic performance and statistical signal quality. The \textit{Sharpe ratio} and \textit{annualized return} reflect how well each model performs when translated into a trading strategy, while the \textit{Information Coefficient (IC)} measures the cross-sectional correlation between predicted and realized returns. The \textit{Information Ratio (IR)} indicates the stability of this signal over time.\\
 
 \noindent Fundamentals and mean sentiment deliver the strongest performance, with the highest Sharpe ratios ($\approx 1.14$–$1.17$) and mean IC values ($\approx 0.027$–$0.028$). This suggests that slow-moving fundamentals and aggregate sentiment remain the most reliable predictors at a daily horizon. Adding text embeddings consistently reduces both Sharpe and IC, indicating that high-dimensional embeddings introduce noise rather than improving predictability. News momentum features offer moderate improvements in IC stability (higher IR) but do not outperform fundamentals in realized portfolio performance. Overall, simpler feature sets provide clearer and more stable signals than embedding-augmented models.
 
-
 \section{Discussion and Conclusion}
+
+This project studies next-day equity return prediction in a setting where predictability is known to be weak and noise dominates at daily horizons. Our results reinforce this: across baseline and flexible machine learning models, directional accuracy remains close to the 50\% benchmark, and gains are incremental rather than dramatic. Nevertheless, the stability of these improvements across model classes and feature sets suggests that the extracted signals are not purely artifacts of model selection and can yield economic value when paired with a risk-aware allocation framework.
+
+\vspace{6pt}
+\noindent A central finding is the importance of structural features. Day-of-week, month-of-year, and sector indicators consistently emerge as the most robust predictors, while many price-based signals that improve in-sample fit fail to generalize once structural variables are included. This reflects the fragility of short-horizon price patterns and the greater stability of calendar and sector effects.
+
+\vspace{6pt}
+\noindent Adding further modalities produces mixed results. Macroeconomic variables provide little incremental benefit beyond structural features, whereas simple news-based sentiment measures, such as mean sentiment, offer meaningful out-of-sample improvements. More complex sentiment dynamics and high-dimensional text embeddings do not improve performance and often degrade it, indicating that additional complexity introduces noise rather than usable signal at a one-day horizon.
+
+\vspace{6pt}
+\noindent While predictive accuracy provides a useful diagnostic, our results show that economic value depends on how forecasts are converted into trades. The robust CVaR optimization layer plays a critical role by penalizing tail risk and turnover, producing smoother and more diversified portfolios than naïve allocation rules. In backtests, models built on compact, stable feature sets (DMS with fundamentals or mean sentiment) deliver the strongest risk-adjusted performance, with the highest Sharpe ratios and the most reliable information coefficients. Embedding-augmented models underperform both statistically and economically, further supporting the conclusion that simpler representations yield clearer signals in this setting.
+
+\vspace{6pt}
+\noindent Taken together, the results suggest a practical modeling principle for short-horizon equity forecasting: prioritize compact, high-bias feature sets that capture persistent structure, and add new modalities only when they provide stable incremental information. Among the models considered, tree-based boosting methods, particularly LightGBM, provide the best combination of performance and stability on tabular financial data. Overall, although next-day return prediction remains extremely challenging, the combination of modestly informative multimodal signals with robust CVaR-based portfolio construction yields economically meaningful improvements in risk-adjusted performance.
+
 \section{Contribution}
+\begin{itemize}
+    \item \textbf{Catherine:}  
+    Prediction Models 
+
+    \item \textbf{Hanna:}  
+    Data Preparation and Portfolio Optimization
+\end{itemize}
+
 
 % \newpage
 % \section*{Appendix}
