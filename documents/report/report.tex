@@ -532,20 +532,14 @@ Table~\ref{tab:performance_ic} summarizes both economic performance and statisti
 \noindent Fundamentals and mean sentiment deliver the strongest performance, with the highest Sharpe ratios ($\approx 1.14$–$1.17$) and mean IC values ($\approx 0.027$–$0.028$). This suggests that slow-moving fundamentals and aggregate sentiment remain the most reliable predictors at a daily horizon. Adding text embeddings consistently reduces both Sharpe and IC, indicating that high-dimensional embeddings introduce noise rather than improving predictability. News momentum features offer moderate improvements in IC stability (higher IR) but do not outperform fundamentals in realized portfolio performance. Overall, simpler feature sets provide clearer and more stable signals than embedding-augmented models.
 
 \section{Discussion and Conclusion}
+\noindent This project shows that predicting next-day stock returns is inherently difficult, with performance only slightly better than random guessing. That said, even small and stable improvements can be valuable when they are translated into disciplined portfolio decisions rather than used in isolation.\\
 
-This project studies next-day equity return prediction in a setting where predictability is known to be weak and noise dominates at daily horizons. Our results reinforce this: across baseline and flexible machine learning models, directional accuracy remains close to the 50\% benchmark, and gains are incremental rather than dramatic. Nevertheless, the stability of these improvements across model classes and feature sets suggests that the extracted signals are not purely artifacts of model selection and can yield economic value when paired with a risk-aware allocation framework.
+\noindent One clear takeaway is that simple, structural signals work best. Calendar effects (day-of-week and month-of-year) and sector information are consistently more reliable than short-term price patterns, which often look strong in-sample but fail to hold up out-of-sample. Adding firm fundamentals or a simple measure of news sentiment can further improve performance, while more complex features such as text embeddings tend to add noise rather than useful signal at a daily horizon.\\
 
-\vspace{6pt}
-\noindent A central finding is the importance of structural features. Day-of-week, month-of-year, and sector indicators consistently emerge as the most robust predictors, while many price-based signals that improve in-sample fit fail to generalize once structural variables are included. This reflects the fragility of short-horizon price patterns and the greater stability of calendar and sector effects.
+\noindent Equally important is how predictions are used. Instead of naïvely allocating capital based on raw forecasts, we embed the signals in a CVaR-based optimization framework that explicitly controls downside risk and trading costs. This produces smoother, more diversified portfolios and avoids the extreme positions that often arise in unconstrained machine learning strategies.\\
 
-\vspace{6pt}
-\noindent Adding further modalities produces mixed results. Macroeconomic variables provide little incremental benefit beyond structural features, whereas simple news-based sentiment measures, such as mean sentiment, offer meaningful out-of-sample improvements. More complex sentiment dynamics and high-dimensional text embeddings do not improve performance and often degrade it, indicating that additional complexity introduces noise rather than usable signal at a one-day horizon.
+\noindent In backtests, models built on compact and interpretable feature sets, especially DMS combined with fundamentals or mean sentiment, deliver the strongest risk-adjusted performance. Overall, the results suggest a practical approach to short-horizon equity trading: focus on stable, low-complexity signals and pair them with robust risk-aware portfolio construction, rather than relying on highly complex models or high-dimensional features.\\
 
-\vspace{6pt}
-\noindent While predictive accuracy provides a useful diagnostic, our results show that economic value depends on how forecasts are converted into trades. The robust CVaR optimization layer plays a critical role by penalizing tail risk and turnover, producing smoother and more diversified portfolios than naïve allocation rules. In backtests, models built on compact, stable feature sets (DMS with fundamentals or mean sentiment) deliver the strongest risk-adjusted performance, with the highest Sharpe ratios and the most reliable information coefficients. Embedding-augmented models underperform both statistically and economically, further supporting the conclusion that simpler representations yield clearer signals in this setting.
-
-\vspace{6pt}
-\noindent Taken together, the results suggest a practical modeling principle for short-horizon equity forecasting: prioritize compact, high-bias feature sets that capture persistent structure, and add new modalities only when they provide stable incremental information. Among the models considered, tree-based boosting methods, particularly LightGBM, provide the best combination of performance and stability on tabular financial data. Overall, although next-day return prediction remains extremely challenging, the combination of modestly informative multimodal signals with robust CVaR-based portfolio construction yields economically meaningful improvements in risk-adjusted performance.
 
 \section{Contribution}
 \begin{itemize}
@@ -553,7 +547,7 @@ This project studies next-day equity return prediction in a setting where predic
     Prediction Models 
 
     \item \textbf{Hanna:}  
-    Data Preparation and Portfolio Optimization
+    Data Preparation, Feature Engineering, and Portfolio Optimization
 \end{itemize}
 
 
